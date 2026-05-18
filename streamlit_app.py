@@ -11,13 +11,6 @@ st.set_page_config(page_title="Painel de Cotações", layout="wide")
 
 st.title("Painel de Cotações – Ações, ETFs e Índices")
 
-st.markdown(
-    """
-    Fonte de dados: Yahoo Finance (cotações atrasadas, não em tempo real).  
-    A página se atualiza automaticamente a cada 5 minutos.
-    """
-)
-
 # Autorefresh a cada 5 minutos (300.000 ms)
 st_autorefresh(interval=5 * 60 * 1000, key="datarefresh")
 
@@ -281,8 +274,6 @@ else:
     # df = df.sort_values(by="Variação %", ascending=False)
 
     # Formatação da tabela
-    st.subheader("Tabela de cotações")
-    
     df = df.sort_values(by="Variação %", ascending=False)
     styled = (
         df.style
@@ -300,5 +291,5 @@ else:
     st.dataframe(styled, use_container_width=True, hide_index=True)
 
     st.caption(
-        "Obs.: valores em tempo atrasado, baseados em dados históricos baixados do Yahoo Finance via yfinance."
+        "Obs.: valores em tempo atrasado, baseados em dados históricos baixados do Yahoo Finance via yfinance. Atualizações a cada 5 min."
     )
