@@ -13,7 +13,8 @@ st.title("Painel de Cotações – Ações, ETFs e Índices")
 
 st.markdown(
     """
-    Fonte de dados: Yahoo Finance. Atualiza automaticamente a cada 5 minutos.
+    Fonte de dados: Yahoo Finance (cotações atrasadas, não em tempo real).  
+    A página se atualiza automaticamente a cada 5 minutos.
     """
 )
 
@@ -85,6 +86,7 @@ def get_quote_data(yf_ticker: str):
     - Fechamento anterior
     - Preço atual (último close)
     - Máxima / mínima de 52 semanas
+    - Timestamp do último dado (horário do Yahoo, convertido para America/Sao_Paulo se possível)
     Retorna dict ou None em caso de falha.
     """
     end = datetime.today()
@@ -106,6 +108,18 @@ def get_quote_data(yf_ticker: str):
 
     if hist is None or hist.empty:
         return None
+
+    # Timestamp do último ponto
+    try:
+        last_ts = hist.index[-1]
+    except Exception:
+        return None
+
+    # Converter para horário de São Paulo se tiver timezone
+    if isinstance(last_ts, pd.Timestamp) and last_ts.tzinfo is not None:
+        last_ts_local = last_ts.tz_convert("America/Sao_Paulo")
+    else:
+        last_ts_local = last_ts
 
     # Preço atual = último fechamento disponível (scalar)
     try:
@@ -133,6 +147,7 @@ def get_quote_data(yf_ticker: str):
         "prev_close": float(prev_close) if prev_close is not None else None,
         "high_52w": float(high_52w),
         "low_52w": float(low_52w),
+        "last_datetime": last_ts_local,
     }
 
 
@@ -153,6 +168,7 @@ def build_table(selected_symbols):
                 "Máx 52s": None,
                 "Mín 52s": None,
                 "% do atual vs máx 52s": None,
+                "Data/Hora (Yahoo)": None,
                 "Ticker Yahoo": yf_ticker,
                 "Status": "Erro ao baixar dados",
             })
@@ -162,6 +178,7 @@ def build_table(selected_symbols):
         prev_close = data["prev_close"]
         high_52w = data["high_52w"]
         low_52w = data["low_52w"]
+        last_dt = data.get("last_datetime")
 
         if prev_close:
             pct_change = (current_price / prev_close - 1) * 100
@@ -173,6 +190,11 @@ def build_table(selected_symbols):
         else:
             pct_of_high = None
 
+        if isinstance(last_dt, (pd.Timestamp, datetime)):
+            last_dt_str = last_dt.strftime("%Y-%m-%d %H:%M")
+        else:
+            last_dt_str = str(last_dt) if last_dt is not None else None
+
         rows.append({
             "Ativo": label,
             "Fechamento anterior": round(prev_close, 4) if prev_close else None,
@@ -181,6 +203,7 @@ def build_table(selected_symbols):
             "Máx 52s": round(high_52w, 4),
             "Mín 52s": round(low_52w, 4),
             "% do atual vs máx 52s": round(pct_of_high, 2) if pct_of_high is not None else None,
+            "Data/Hora (Yahoo)": last_dt_str,
             "Ticker Yahoo": yf_ticker,
             "Status": "OK",
         })
@@ -245,9 +268,13 @@ if not symbols:
 else:
     df = build_table(symbols)
 
+    # (Opcional) já começar ordenado pela maior variação
+    # df = df.sort_values(by="Variação %", ascending=False)
+
     # Formatação da tabela
     st.subheader("Tabela de cotações")
-
+    
+    df = df.sort_values(by="Variação %", ascending=False)
     styled = (
         df.style
         .map(color_pct, subset=["Variação %"])
