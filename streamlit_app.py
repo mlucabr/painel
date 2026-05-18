@@ -83,64 +83,73 @@ TICKERS = {
 def get_quote_data(yf_ticker: str):
     """
     Busca dados de cotação via yfinance:
-    - Fechamento anterior
-    - Preço atual (último close)
-    - Máxima / mínima de 52 semanas
-    - Timestamp do último dado (horário do Yahoo, convertido para America/Sao_Paulo se possível)
+    - Fechamento anterior (diário)
+    - Preço “atual” (último intraday, 5m atrasado aprox.)
+    - Máxima / mínima de 52 semanas (diário)
+    - Timestamp do último dado
     Retorna dict ou None em caso de falha.
     """
     end = datetime.today()
     start = end - timedelta(days=400)
 
+    # ---------- Histórico diário (para 52 semanas e fechamento anterior) ----------
     try:
-        # multi_level_index=False evita multiindex nas colunas,
-        # o que simplifica hist["Close"].iloc[-1]
-        hist = yf.download(
+        daily = yf.download(
             yf_ticker,
             start=start.strftime("%Y-%m-%d"),
             end=end.strftime("%Y-%m-%d"),
+            interval="1d",
             auto_adjust=False,
             progress=False,
             multi_level_index=False,
         )
     except Exception:
-        hist = None
+        daily = None
 
-    if hist is None or hist.empty:
+    if daily is None or daily.empty:
         return None
 
-    # Timestamp do último ponto
-    try:
-        last_ts = hist.index[-1]
-    except Exception:
-        return None
-
-    # Converter para horário de São Paulo se tiver timezone
-    if isinstance(last_ts, pd.Timestamp) and last_ts.tzinfo is not None:
-        last_ts_local = last_ts.tz_convert("America/Sao_Paulo")
-    else:
-        last_ts_local = last_ts
-
-    # Preço atual = último fechamento disponível (scalar)
-    try:
-        last_close = hist["Close"].iloc[-1]
-    except Exception:
-        return None
-
-    # Fechamento anterior = penúltimo fechamento, se existir
-    if len(hist["Close"]) > 1:
-        prev_close = hist["Close"].iloc[-2]
+    # Fechamento anterior (penúltimo diário)
+    if len(daily["Close"]) > 1:
+        prev_close = daily["Close"].iloc[-2]
     else:
         prev_close = None
 
     # 52 semanas ~ últimos 365 dias
-    hist_52w = hist[hist.index >= (end - timedelta(days=365))]
-    if hist_52w.empty:
-        high_52w = hist["High"].max()
-        low_52w = hist["Low"].min()
+    daily_52w = daily[daily.index >= (end - timedelta(days=365))]
+    if daily_52w.empty:
+        high_52w = daily["High"].max()
+        low_52w = daily["Low"].min()
     else:
-        high_52w = hist_52w["High"].max()
-        low_52w = hist_52w["Low"].min()
+        high_52w = daily_52w["High"].max()
+        low_52w = daily_52w["Low"].min()
+
+    # ---------- Histórico intraday (para preço “atual” e horário) ----------
+    try:
+        intraday = yf.download(
+            yf_ticker,
+            period="1d",          # só o pregão de hoje
+            interval="5m",        # candles de 5 minutos (com atraso do Yahoo)
+            auto_adjust=False,
+            progress=False,
+            multi_level_index=False,
+        )
+    except Exception:
+        intraday = None
+
+    if intraday is not None and not intraday.empty:
+        last_ts = intraday.index[-1]
+        last_close = intraday["Close"].iloc[-1]
+    else:
+        # fallback: usa o último diário (vai ficar com cara de fechamento de ontem)
+        last_ts = daily.index[-1]
+        last_close = daily["Close"].iloc[-1]
+
+    # Converter timestamp para horário de São Paulo se tiver timezone
+    if isinstance(last_ts, pd.Timestamp) and last_ts.tzinfo is not None:
+        last_ts_local = last_ts.tz_convert("America/Sao_Paulo")
+    else:
+        last_ts_local = last_ts
 
     return {
         "current_price": float(last_close),
