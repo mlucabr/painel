@@ -288,7 +288,12 @@ else:
         })
     )
 
-    st.dataframe(styled, use_container_width=True, hide_index=True)
+    st.dataframe(
+    styled,
+    use_container_width=True,
+    hide_index=True,
+    height="content",  # ajuste esse valor até ficar confortável
+    )
 
     st.caption(
         "Obs.: valores em tempo atrasado, baseados em dados históricos baixados do Yahoo Finance via yfinance. Atualizações a cada 5 min."
