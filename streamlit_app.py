@@ -88,27 +88,35 @@ def get_quote_data(yf_ticker: str):
     - Máxima / mínima de 52 semanas
     Retorna dict ou None em caso de falha.
     """
-    try:
-        t = yf.Ticker(yf_ticker)
-        info = t.info  # pode estar depreciado, mas ainda funciona em muitos casos
-    except Exception:
-        info = {}
+    from datetime import datetime, timedelta
+    import yfinance as yf
 
-    # Para maior robustez, buscamos histórico de 400 dias (aprox. 18 meses)
-    # e calculamos 52 semanas (365 dias) na mão.
     end = datetime.today()
     start = end - timedelta(days=400)
+
     try:
-        hist = yf.download(yf_ticker, start=start.strftime("%Y-%m-%d"),
-                           end=end.strftime("%Y-%m-%d"))
+        # multi_level_index=False evita multiindex nas colunas,
+        # o que simplifica hist["Close"].iloc[-1]
+        hist = yf.download(
+            yf_ticker,
+            start=start.strftime("%Y-%m-%d"),
+            end=end.strftime("%Y-%m-%d"),
+            auto_adjust=False,
+            progress=False,
+            multi_level_index=False,
+        )
     except Exception:
         hist = None
 
     if hist is None or hist.empty:
         return None
 
-    # Preço atual = último fechamento disponível
-    last_close = hist["Close"].iloc[-1]
+    # Preço atual = último fechamento disponível (scalar)
+    try:
+        last_close = hist["Close"].iloc[-1]
+    except Exception:
+        return None
+
     # Fechamento anterior = penúltimo fechamento, se existir
     if len(hist["Close"]) > 1:
         prev_close = hist["Close"].iloc[-2]
