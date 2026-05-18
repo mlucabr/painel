@@ -8,7 +8,6 @@ from datetime import datetime, timedelta
 # Configurações iniciais
 # ==========================
 st.set_page_config(page_title="Painel de Cotações", layout="wide")
-
 st.title("Painel de Cotações – Ações, ETFs e Índices")
 
 # Autorefresh a cada 5 minutos (300.000 ms)
@@ -164,15 +163,15 @@ def build_table(selected_symbols):
         if data is None:
             rows.append({
                 "Ativo": label,
-                "Fechamento anterior": None,
-                "Preço atual": None,
+                "Anterior": None,
+                "Preço": None,
                 "Variação %": None,
-                "Máx 52s": None,
-                "Mín 52s": None,
-                "% do atual vs máx 52s": None,
+                "Max 52s": None,
+                "Min 52s": None,
+                "% max 52s": None,
                 "Data/Hora (Yahoo)": None,
                 "Ticker Yahoo": yf_ticker,
-                "Status": "Erro ao baixar dados",
+                "Status": "Erro",
             })
             continue
 
@@ -199,12 +198,12 @@ def build_table(selected_symbols):
 
         rows.append({
             "Ativo": label,
-            "Fechamento anterior": round(prev_close, 4) if prev_close else None,
-            "Preço atual": round(current_price, 4),
+            "Anterior": round(prev_close, 4) if prev_close else None,
+            "Preço": round(current_price, 4),
             "Variação %": round(pct_change, 2) if pct_change is not None else None,
-            "Máx 52s": round(high_52w, 4),
-            "Mín 52s": round(low_52w, 4),
-            "% do atual vs máx 52s": round(pct_of_high, 2) if pct_of_high is not None else None,
+            "Max 52s": round(high_52w, 4),
+            "Min 52s": round(low_52w, 4),
+            "% max 52s": round(pct_of_high, 2) if pct_of_high is not None else None,
             "Data/Hora (Yahoo)": last_dt_str,
             "Ticker Yahoo": yf_ticker,
             "Status": "OK",
