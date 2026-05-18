@@ -288,7 +288,7 @@ else:
         })
     )
 
-    st.dataframe(styled, use_container_width=True)
+    st.dataframe(styled, use_container_width=True, hide_index=True)
 
     st.caption(
         "Obs.: valores em tempo atrasado, baseados em dados históricos baixados do Yahoo Finance via yfinance."
