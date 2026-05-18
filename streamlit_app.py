@@ -61,6 +61,9 @@ TICKERS = {
     "VALE3": "VALE3.SA",
     "PRIO3": "PRIO3.SA",
     "GOAU4": "GOAU4.SA",
+    "PSSA3": "PSSA3.SA",
+    "PETR4": "PETR4.SA",
+    
 
     # Índices e câmbio
     "IBOV": "^BVSP",
@@ -198,11 +201,11 @@ def build_table(selected_symbols):
 
         rows.append({
             "Ativo": label,
-            "Anterior": round(prev_close, 4) if prev_close else None,
-            "Preço": round(current_price, 4),
+            "Anterior": round(prev_close, 2) if prev_close else None,
+            "Preço": round(current_price, 2),
             "Variação %": round(pct_change, 2) if pct_change is not None else None,
-            "Max 52s": round(high_52w, 4),
-            "Min 52s": round(low_52w, 4),
+            "Max 52s": round(high_52w, 2),
+            "Min 52s": round(low_52w, 2),
             "% max 52s": round(pct_of_high, 2) if pct_of_high is not None else None,
             "Data/Hora (Yahoo)": last_dt_str,
             "Ticker Yahoo": yf_ticker,
@@ -237,7 +240,7 @@ b3_etfs = [
 b3_acoes = [
     "SUZB3", "CSAN3", "KLBN11", "BEEF3", "LREN3", "BBAS3", "VVEO3",
     "BBDC4", "CMIG4", "EGIE3", "WIZC3", "UNIP6", "ITSA4", "ALOS3",
-    "CXSE3", "VALE3", "PRIO3", "GOAU4",
+    "CXSE3", "VALE3", "PRIO3", "GOAU4", "PETR4", "PSSA3"
 ]
 indices = ["IBOV", "USDBRL", "EURBRL"]
 
