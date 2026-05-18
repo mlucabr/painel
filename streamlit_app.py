@@ -249,7 +249,7 @@ else:
         return ""
     color = "green" if val > 0 else "red" if val < 0 else "black"
     # Styler.map espera uma string CSS
-        return f"color: {color};"
+    return f"color: {color};"
 
 styled = (
     df.style
