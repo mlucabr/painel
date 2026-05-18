@@ -28,16 +28,16 @@ st_autorefresh(interval=5 * 60 * 1000, key="datarefresh")
 # Dicionário: nome amigável -> ticker no Yahoo Finance
 TICKERS = {
     # Exterior (UCITS / EUA)
-    "IWDA": "IWDA.IR",   # iShares Core MSCI World UCITS[web:13]
-    "IWQU": "IWQU.L",    # iShares Edge MSCI World Quality UCITS[web:22]
-    "WSML": "WSML.L",    # iShares MSCI World Small Cap UCITS[web:44]
-    "EMVL": "EMVL.L",    # iShares EM Value Factor UCITS[web:48]
-    "IWVL": "IWVL.L",    # iShares World Value Factor UCITS[web:54]
-    "IFSW": "IFSW.L",    # iShares STOXX World Equity Multifactor UCITS[web:52]
-    "BITW": "BITW",      # Bitwise 10 Crypto Index Fund[web:64]
+    "IWDA": "IWDA.IR",   # iShares Core MSCI World UCITS
+    "IWQU": "IWQU.L",    # iShares Edge MSCI World Quality UCITS
+    "WSML": "WSML.L",    # iShares MSCI World Small Cap UCITS
+    "EMVL": "EMVL.L",    # iShares EM Value Factor UCITS
+    "IWVL": "IWVL.L",    # iShares World Value Factor UCITS
+    "IFSW": "IFSW.L",    # iShares STOXX World Equity Multifactor UCITS
+    "BITW": "BITW",      # Bitwise 10 Crypto Index Fund
 
     # ETFs B3
-    "HASH11": "HASH11.SA",[web:28]
+    "HASH11": "HASH11.SA",
     "JURO11": "JURO11.SA",
     "SMAC11": "SMAC11.SA",
     "IRIM11": "IRIM11.SA",
@@ -54,7 +54,7 @@ TICKERS = {
     "SUZB3": "SUZB3.SA",
     "CSAN3": "CSAN3.SA",
     "KLBN11": "KLBN11.SA",
-    "BEEF3": "BEEF3.SA",[web:36]
+    "BEEF3": "BEEF3.SA",
     "LREN3": "LREN3.SA",
     "BBAS3": "BBAS3.SA",
     "VVEO3": "VVEO3.SA",
@@ -71,9 +71,9 @@ TICKERS = {
     "GOAU4": "GOAU4.SA",
 
     # Índices e câmbio
-    "IBOV": "^BVSP",[web:71]
-    "USDBRL": "USDBRL=X",[web:34]
-    "EURBRL": "EURBRL=X",[web:58]
+    "IBOV": "^BVSP",
+    "USDBRL": "USDBRL=X",
+    "EURBRL": "EURBRL=X",
 }
 
 # ==========================
