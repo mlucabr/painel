@@ -13,8 +13,7 @@ st.title("Painel de Cotações – Ações, ETFs e Índices")
 
 st.markdown(
     """
-    Fonte de dados: Yahoo Finance (cotações atrasadas, não em tempo real).  
-    A página se atualiza automaticamente a cada 5 minutos.
+    Fonte de dados: Yahoo Finance. Atualiza automaticamente a cada 5 minutos.
     """
 )
 
@@ -28,7 +27,7 @@ st_autorefresh(interval=5 * 60 * 1000, key="datarefresh")
 # Dicionário: nome amigável -> ticker no Yahoo Finance
 TICKERS = {
     # Exterior (UCITS / EUA)
-    "IWDA": "IWDA.IR",   # iShares Core MSCI World UCITS
+    "IWDA": "IWDA.L",   # iShares Core MSCI World UCITS
     "IWQU": "IWQU.L",    # iShares Edge MSCI World Quality UCITS
     "WSML": "WSML.L",    # iShares MSCI World Small Cap UCITS
     "EMVL": "EMVL.L",    # iShares EM Value Factor UCITS
