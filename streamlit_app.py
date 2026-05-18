@@ -245,25 +245,26 @@ else:
 
     # Destacar variação com cores
     def color_pct(val):
-        if pd.isna(val):
-            return ""
-        color = "green" if val > 0 else "red" if val < 0 else "black"
-        return f"color: {color}"
+    if pd.isna(val):
+        return ""
+    color = "green" if val > 0 else "red" if val < 0 else "black"
+    # Styler.map espera uma string CSS
+    return f"color: {color};"
 
-    styled = (
-        df.style
-        .applymap(color_pct, subset=["Variação %"])
-        .format({
-            "Fechamento anterior": "{:,.4f}",
-            "Preço atual": "{:,.4f}",
-            "Variação %": "{:+.2f}%",
-            "Máx 52s": "{:,.4f}",
-            "Mín 52s": "{:,.4f}",
-            "% do atual vs máx 52s": "{:,.2f}%",
-        })
-    )
+styled = (
+    df.style
+    .map(color_pct, subset=["Variação %"])
+    .format({
+        "Fechamento anterior": "{:,.4f}",
+        "Preço atual": "{:,.4f}",
+        "Variação %": "{:+.2f}%",
+        "Máx 52s": "{:,.4f}",
+        "Mín 52s": "{:,.4f}",
+        "% do atual vs máx 52s": "{:,.2f}%",
+    })
+)
 
-    st.dataframe(styled, use_container_width=True)
+st.dataframe(styled, use_container_width=True)
 
     st.caption(
         "Obs.: valores em tempo atrasado, baseados em dados históricos baixados do Yahoo Finance via yfinance."
