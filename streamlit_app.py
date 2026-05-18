@@ -104,9 +104,9 @@ def get_quote_data(yf_ticker: str):
     if daily is None or daily.empty:
         return None
 
-    # Fechamento anterior (penúltimo diário)
-    if len(daily["Close"]) > 1:
-        prev_close = daily["Close"].iloc[-2]
+    # Fechamento anterior = último diário disponível (último pregão fechado)
+    if len(daily["Close"]) > 0:
+        prev_close = daily["Close"].iloc[-1]
     else:
         prev_close = None
 
