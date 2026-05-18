@@ -87,12 +87,12 @@ def get_quote_data(yf_ticker: str):
     end = datetime.today()
     start = end - timedelta(days=400)
 
-    # ---------- Histórico diário (para 52 semanas e fechamento anterior) ----------
+        # ---------- Histórico diário (para 52 semanas e fechamento anterior) ----------
     try:
+        # usar period evita vários bugs de start/end para alguns tickers da B3
         daily = yf.download(
             yf_ticker,
-            start=start.strftime("%Y-%m-%d"),
-            end=end.strftime("%Y-%m-%d"),
+            period="400d",        # ~ último ano e pouco
             interval="1d",
             auto_adjust=False,
             progress=False,
