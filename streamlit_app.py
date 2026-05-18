@@ -88,9 +88,6 @@ def get_quote_data(yf_ticker: str):
     - Máxima / mínima de 52 semanas
     Retorna dict ou None em caso de falha.
     """
-    from datetime import datetime, timedelta
-    import yfinance as yf
-
     end = datetime.today()
     start = end - timedelta(days=400)
 
@@ -193,6 +190,15 @@ def build_table(selected_symbols):
     return df
 
 
+def color_pct(val):
+    """Função de cor para a coluna de variação percentual."""
+    if pd.isna(val):
+        return ""
+    color = "green" if val > 0 else "red" if val < 0 else "black"
+    # Styler.map espera uma string CSS
+    return f"color: {color};"
+
+
 # ==========================
 # UI – filtros e exibição
 # ==========================
@@ -243,28 +249,20 @@ else:
     # Formatação da tabela
     st.subheader("Tabela de cotações")
 
-    # Destacar variação com cores
-   def color_pct(val):
-    if pd.isna(val):
-        return ""
-    color = "green" if val > 0 else "red" if val < 0 else "black"
-    # Styler.map espera uma string CSS
-    return f"color: {color};"
+    styled = (
+        df.style
+        .map(color_pct, subset=["Variação %"])
+        .format({
+            "Fechamento anterior": "{:,.4f}",
+            "Preço atual": "{:,.4f}",
+            "Variação %": "{:+.2f}%",
+            "Máx 52s": "{:,.4f}",
+            "Mín 52s": "{:,.4f}",
+            "% do atual vs máx 52s": "{:,.2f}%",
+        })
+    )
 
-styled = (
-    df.style
-    .map(color_pct, subset=["Variação %"])
-    .format({
-        "Fechamento anterior": "{:,.4f}",
-        "Preço atual": "{:,.4f}",
-        "Variação %": "{:+.2f}%",
-        "Máx 52s": "{:,.4f}",
-        "Mín 52s": "{:,.4f}",
-        "% do atual vs máx 52s": "{:,.2f}%",
-    })
-)
-
-st.dataframe(styled, use_container_width=True)
+    st.dataframe(styled, use_container_width=True)
 
     st.caption(
         "Obs.: valores em tempo atrasado, baseados em dados históricos baixados do Yahoo Finance via yfinance."
