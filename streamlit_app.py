@@ -244,12 +244,12 @@ else:
     st.subheader("Tabela de cotações")
 
     # Destacar variação com cores
-    def color_pct(val):
+   def color_pct(val):
     if pd.isna(val):
         return ""
     color = "green" if val > 0 else "red" if val < 0 else "black"
     # Styler.map espera uma string CSS
-    return f"color: {color};"
+        return f"color: {color};"
 
 styled = (
     df.style
