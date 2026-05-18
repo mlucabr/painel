@@ -281,12 +281,12 @@ else:
         df.style
         .map(color_pct, subset=["Variação %"])
         .format({
-            "Fechamento anterior": "{:,.2f}",
-            "Preço atual": "{:,.2f}",
+            "Anterior": "{:,.2f}",
+            "Preço": "{:,.2f}",
             "Variação %": "{:+.2f}%",
-            "Máx 52s": "{:,.2f}",
-            "Mín 52s": "{:,.2f}",
-            "% do atual vs máx 52s": "{:,.2f}%",
+            "Max 52s": "{:,.2f}",
+            "Min 52s": "{:,.2f}",
+            "% max 52s": "{:,.2f}%",
         })
     )
 
