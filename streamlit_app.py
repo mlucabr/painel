@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 # Configurações iniciais
 # ==========================
 st.set_page_config(page_title="Painel de Cotações", layout="wide")
-st.title("Painel de Cotações – Ações, ETFs e Índices")
+st.title("Painel de Controle")
 
 # Autorefresh a cada 5 minutos (300.000 ms)
 st_autorefresh(interval=5 * 60 * 1000, key="datarefresh")
@@ -314,6 +314,5 @@ else:
     )
 
     st.caption(
-        "Obs.: valores em tempo atrasado, baseados em dados históricos baixados do Yahoo Finance via yfinance. 
-        Atualizações a cada 5 min. v1.0"
+        "Obs.: valores com delay ~20min, via yfinance. Atualizado a cada 5 min. Painel v1.0"
     )
