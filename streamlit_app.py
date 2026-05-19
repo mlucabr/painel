@@ -78,48 +78,64 @@ TICKERS = {
 def get_quote_data(yf_ticker: str):
     """
     Busca dados de cotação via yfinance:
-    - Fechamento anterior (diário)
+    - Fechamento anterior (Previous Close do Yahoo)
     - Preço “atual” (último intraday, 5m atrasado aprox.)
-    - Máxima / mínima de 52 semanas (diário)
-    - Timestamp do último dado
+    - Máxima / mínima de 52 semanas (diário, ~últimos 400 dias)
+    - Timestamp do último dado (intraday ou diário)
     Retorna dict ou None em caso de falha.
     """
-    end = datetime.today()
-    start = end - timedelta(days=400)
-
-        # ---------- Histórico diário (para 52 semanas e fechamento anterior) ----------
+    # ---------- Histórico longo para 52 semanas ----------
     try:
-        # usar period evita vários bugs de start/end para alguns tickers da B3
-        daily = yf.download(
+        hist_52 = yf.download(
             yf_ticker,
-            period="400d",        # ~ último ano e pouco
+            period="400d",        # ~últimos 400 dias
             interval="1d",
             auto_adjust=False,
             progress=False,
             multi_level_index=False,
         )
     except Exception:
-        daily = None
+        hist_52 = None
 
-    if daily is None or daily.empty:
+    if hist_52 is None or hist_52.empty:
         return None
 
-    # Fechamento anterior = último diário disponível (último pregão fechado)
-    if len(daily["Close"]) > 0:
-        prev_close = daily["Close"].iloc[-1]
-    else:
-        prev_close = None
-
     # 52 semanas ~ últimos 365 dias
-    daily_52w = daily[daily.index >= (end - timedelta(days=365))]
-    if daily_52w.empty:
-        high_52w = daily["High"].max()
-        low_52w = daily["Low"].min()
+    end = datetime.today()
+    hist_52w = hist_52[hist_52.index >= (end - timedelta(days=365))]
+    if hist_52w.empty:
+        high_52w = hist_52["High"].max()
+        low_52w = hist_52["Low"].min()
     else:
-        high_52w = daily_52w["High"].max()
-        low_52w = daily_52w["Low"].min()
+        high_52w = hist_52w["High"].max()
+        low_52w = hist_52w["Low"].min()
 
-    # ---------- Histórico intraday (para preço “atual” e horário) ----------
+    # ---------- 2 dias diários para Previous Close ----------
+    try:
+        daily_2d = yf.download(
+            yf_ticker,
+            period="2d",
+            interval="1d",
+            auto_adjust=False,
+            progress=False,
+            multi_level_index=False,
+        )
+    except Exception:
+        daily_2d = None
+
+    if daily_2d is None or daily_2d.empty:
+        return None
+
+    # Se só tiver 1 linha (ativo muito novo, primeiro dia), usa o mesmo valor
+    if len(daily_2d["Close"]) == 1:
+        prev_close = daily_2d["Close"].iloc[0]
+        current_daily = prev_close
+    else:
+        # iloc[-2] = dia anterior (Previous Close), iloc[-1] = dia atual (parcial ou fechado)
+        prev_close = daily_2d["Close"].iloc[-2]
+        current_daily = daily_2d["Close"].iloc[-1]
+
+    # ---------- Intraday para Preço atual ----------
     try:
         intraday = yf.download(
             yf_ticker,
@@ -136,9 +152,9 @@ def get_quote_data(yf_ticker: str):
         last_ts = intraday.index[-1]
         last_close = intraday["Close"].iloc[-1]
     else:
-        # fallback: usa o último diário (vai ficar com cara de fechamento de ontem)
-        last_ts = daily.index[-1]
-        last_close = daily["Close"].iloc[-1]
+        # fallback: usa o diário do dia atual
+        last_ts = daily_2d.index[-1]
+        last_close = current_daily
 
     # Converter timestamp para horário de São Paulo se tiver timezone
     if isinstance(last_ts, pd.Timestamp) and last_ts.tzinfo is not None:
@@ -147,8 +163,8 @@ def get_quote_data(yf_ticker: str):
         last_ts_local = last_ts
 
     return {
-        "current_price": float(last_close),
-        "prev_close": float(prev_close) if prev_close is not None else None,
+        "current_price": float(last_close),                          # Preço
+        "prev_close": float(prev_close) if prev_close is not None else None,  # Anterior (Previous Close)
         "high_52w": float(high_52w),
         "low_52w": float(low_52w),
         "last_datetime": last_ts_local,
