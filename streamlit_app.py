@@ -314,5 +314,6 @@ else:
     )
 
     st.caption(
-        "Obs.: valores em tempo atrasado, baseados em dados históricos baixados do Yahoo Finance via yfinance. Atualizações a cada 5 min."
+        "Obs.: valores em tempo atrasado, baseados em dados históricos baixados do Yahoo Finance via yfinance. 
+        Atualizações a cada 5 min. v1.0"
     )
