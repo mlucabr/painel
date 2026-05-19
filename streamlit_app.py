@@ -71,6 +71,30 @@ TICKERS = {
     "EURBRL": "EURBRL=X",
 }
 
+# Agrupando as listas conforme você descreveu
+externos = ["IWDA", "IWQU", "WSML", "EMVL", "IWVL", "IFSW", "BITW"]
+b3_etfs = [
+    "HASH11", "JURO11", "SMAC11", "IRIM11", "DIVO11", "LVOL11",
+    "BMMT11", "BOVV11", "SPXR11", "LFTS11", "B5P211", "IB5M11",
+]
+b3_acoes = [
+    "SUZB3", "CSAN3", "KLBN11", "BEEF3", "LREN3", "BBAS3", "VVEO3",
+    "BBDC4", "CMIG4", "EGIE3", "WIZC3", "UNIP6", "ITSA4", "ALOS3",
+    "CXSE3", "VALE3", "PRIO3", "GOAU4", "PETR4", "PSSA3",
+]
+indices = ["IBOV", "USDBRL", "EURBRL"]
+
+# Mapa Ativo -> Grupo
+GROUPS = {}
+for t in externos:
+    GROUPS[t] = "Exterior"
+for t in b3_etfs:
+    GROUPS[t] = "ETFs Brasil"
+for t in b3_acoes:
+    GROUPS[t] = "Ações Brasil"
+for t in indices:
+    GROUPS[t] = "Índices / Câmbio"
+
 # ==========================
 # Funções auxiliares
 # ==========================
@@ -181,6 +205,7 @@ def build_table(selected_symbols):
         data = get_quote_data(yf_ticker)
         if data is None:
             rows.append({
+                "Grupo": GROUPS.get(label, ""),
                 "Ativo": label,
                 "Anterior": None,
                 "Preço": None,
@@ -216,6 +241,7 @@ def build_table(selected_symbols):
             last_dt_str = str(last_dt) if last_dt is not None else None
 
         rows.append({
+            "Grupo": GROUPS.get(label, ""),
             "Ativo": label,
             "Anterior": round(prev_close, 2) if prev_close else None,
             "Preço": round(current_price, 2),
@@ -311,6 +337,7 @@ else:
     use_container_width=True,
     hide_index=True,
     height="content",  # ajuste esse valor até ficar confortável
+    row_height=22, # ajustar até valor que gostar
     )
 
     st.caption(
