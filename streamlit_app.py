@@ -337,7 +337,7 @@ else:
     use_container_width=True,
     hide_index=True,
     height="content",  # ajuste esse valor até ficar confortável
-    row_height=22, # ajustar até valor que gostar
+    row_height=24, # ajustar até valor que gostar
     )
 
     st.caption(
