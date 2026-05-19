@@ -87,13 +87,13 @@ indices = ["IBOV", "USDBRL", "EURBRL"]
 # Mapa Ativo -> Grupo
 GROUPS = {}
 for t in externos:
-    GROUPS[t] = "Exterior"
+    GROUPS[t] = "IBKR"
 for t in b3_etfs:
-    GROUPS[t] = "ETFs Brasil"
+    GROUPS[t] = "ETFs_BR"
 for t in b3_acoes:
-    GROUPS[t] = "Ações Brasil"
+    GROUPS[t] = "Clube"
 for t in indices:
-    GROUPS[t] = "Índices / Câmbio"
+    GROUPS[t] = "Outros"
 
 # ==========================
 # Funções auxiliares
