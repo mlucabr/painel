@@ -313,22 +313,24 @@ if tot_ajustado > 0:
 else:
     carteira_tr_pma = None
 
+import math
+
 total_row = {
     "Carteira": "TOTAL",
     "Ativo": "",
     "Posição": df["Posição"].sum(),
-    "Preço médio": None,
-    "PM Ajustado": None,
+    "Preço médio": float("nan"),      # antes estava None
+    "PM Ajustado": float("nan"),      # antes estava None
     "Escopo": "",
-    "Anterior": None,
-    "Preço": None,
-    "% Atual": carteira_pct_dia,
+    "Anterior": float("nan"),         # antes estava None
+    "Preço": float("nan"),            # antes estava None
+    "% Atual": carteira_pct_dia if carteira_pct_dia is not None else float("nan"),
     "Valor Anterior": tot_valor_anterior,
     "Valor de Mercado": tot_valor_mercado,
     "Total investido": tot_investido,
     "Total ajustado": tot_ajustado,
-    "Total return": carteira_total_return,
-    "TR PMA": carteira_tr_pma,
+    "Total return": carteira_total_return if carteira_total_return is not None else float("nan"),
+    "TR PMA": carteira_tr_pma if carteira_tr_pma is not None else float("nan"),
     "Ticker Yahoo": "",
     "Data/Hora (Yahoo)": "",
 }
