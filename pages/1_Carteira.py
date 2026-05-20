@@ -5,13 +5,6 @@ from datetime import datetime, timedelta
 
 st.title("Carteira de Investimentos")
 
-st.markdown(
-    """
-    Faça upload do arquivo Excel da carteira (modelo com colunas:  
-    **Ativo, Carteira, Posição, Preço médio, PM Ajustado, Escopo**).
-    """
-)
-
 # ==========================
 # Upload do Excel
 # ==========================
