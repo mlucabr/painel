@@ -2,3 +2,4 @@ streamlit
 yfinance
 streamlit-autorefresh
 pandas
+openpyx1
