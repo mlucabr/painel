@@ -3,6 +3,11 @@ import pandas as pd
 import yfinance as yf
 from datetime import datetime, timedelta
 
+# Botão de navegação no topo
+col_back, _ = st.columns([1, 5])
+with col_back:
+    st.page_link("streamlit_app.py", label="← Voltar para Painel", icon="🏠")
+
 # Linha superior: título à esquerda, upload no canto superior direito
 col_title, col_upload = st.columns([3, 1])
 
