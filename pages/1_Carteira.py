@@ -200,6 +200,20 @@ if df_port_filtered.empty:
     st.warning("Nenhum ativo para as carteiras selecionadas.")
     st.stop()
 
+# Filtro adicional por Escopo
+escopos_disponiveis = sorted(df_port_filtered["Escopo"].dropna().unique())
+escopos_selecionados = st.multiselect(
+    "Filtrar por escopo",
+    options=escopos_disponiveis,
+    default=escopos_disponiveis,
+)
+
+df_port_filtered = df_port_filtered[df_port_filtered["Escopo"].isin(escopos_selecionados)]
+
+if df_port_filtered.empty:
+    st.warning("Nenhum ativo para os escopos selecionados.")
+    st.stop()
+
 # ==========================
 # Buscar cotações para cada ativo
 # ==========================
@@ -322,6 +336,39 @@ total_row = {
 df_display = pd.concat([df, pd.DataFrame([total_row])], ignore_index=True)
 
 # ==========================
+# KPIs da carteira
+# ==========================
+
+col1, col2, col3 = st.columns(3)
+
+with col1:
+    st.metric(
+        "Valor de Mercado da Carteira",
+        f"{tot_valor_mercado:,.2f}",
+        help="Somatório da coluna 'Valor de Mercado' para as carteiras filtradas."
+    )
+
+with col2:
+    # P&L do dia = diferença vs. Valor Anterior
+    pl_dia = tot_valor_mercado - tot_valor_anterior
+    delta_dia = f"{carteira_pct_dia:+.2f}%" if carteira_pct_dia is not None else "-"
+    st.metric(
+        "P&L do dia",
+        f"{pl_dia:,.2f}",
+        delta=delta_dia,
+        help="Variação da carteira hoje em relação ao fechamento anterior."
+    )
+
+with col3:
+    delta_tr = f"{carteira_tr_pma:+.2f}%" if carteira_tr_pma is not None else "-"
+    st.metric(
+        "Total return (PMA)",
+        f"{carteira_tr_pma:+.2f}%" if carteira_tr_pma is not None else "-",
+        delta=None,
+        help="Retorno acumulado da carteira considerando o PM Ajustado."
+    )
+
+# ==========================
 # Exibição
 # ==========================
 
@@ -356,6 +403,19 @@ def color_pct(val):
         return ""
     color = "green" if val > 0 else "red" if val < 0 else "black"
     return f"color: {color};"
+
+# ==========================
+# Download da carteira detalhada
+# ==========================
+
+csv_bytes = df_display.to_csv(index=False).encode("utf-8-sig")
+
+st.download_button(
+    label="📥 Baixar carteira detalhada (CSV)",
+    data=csv_bytes,
+    file_name="carteira_detalhada.csv",
+    mime="text/csv",
+)
 
 styled = (
     df_display.style
