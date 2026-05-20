@@ -267,6 +267,9 @@ df["Valor de Mercado"] = df["Posição"] * df["Preço"]
 df["Total investido"] = df["Posição"] * df["Preço médio"]
 df["Total ajustado"] = df["Posição"] * df["PM Ajustado"]
 
+# P&L do dia por ativo
+df["P&L dia"] = df["Valor de Mercado"] - df["Valor Anterior"]
+
 # Evitar divisão por zero
 df["Total return"] = (df["Valor de Mercado"] / df["Total investido"] - 1).where(
     df["Total investido"] > 0
@@ -283,6 +286,7 @@ tot_valor_anterior = df["Valor Anterior"].sum()
 tot_valor_mercado = df["Valor de Mercado"].sum()
 tot_investido = df["Total investido"].sum()
 tot_ajustado = df["Total ajustado"].sum()
+tot_pl_dia = df["P&L dia"].sum()
 
 if tot_valor_anterior > 0:
     carteira_pct_dia = (tot_valor_mercado / tot_valor_anterior - 1) * 100
@@ -310,6 +314,7 @@ total_row = {
     "Preço": float("nan"),
     "% Atual": carteira_pct_dia if carteira_pct_dia is not None else float("nan"),
     "Valor Anterior": tot_valor_anterior,
+    "P&L dia": tot_pl_dia,
     "Valor de Mercado": tot_valor_mercado,
     "Total investido": tot_investido,
     "Total ajustado": tot_ajustado,
