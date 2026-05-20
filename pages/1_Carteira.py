@@ -237,7 +237,7 @@ for _, row in unique_tickers.iterrows():
         pct_change = None
 
     if isinstance(last_dt, (pd.Timestamp, datetime)):
-        ts_str = last_dt.strftime("%Y-%m-%d %H:%M")
+        ts_str = last_dt.strftime("%d/%m/%Y %H:%M")
     else:
         ts_str = str(last_dt) if last_dt is not None else None
 
@@ -363,6 +363,27 @@ with col4:
         help="Retorno acumulado da carteira considerando o PM Ajustado."
     )
 
+def fmt_num(x, dec=2, signed=False, pct=False):
+    if pd.isna(x):
+        return ""
+    fmt = f"{{:{'+' if signed else ''},.{dec}f}}"
+    s = fmt.format(x)
+    # troca ponto e vírgula para padrão brasileiro
+    s = s.replace(",", "X").replace(".", ",").replace("X", ".")
+    if pct:
+        s += "%"
+    return s
+
+def fmt_int(x):
+    if pd.isna(x):
+        return ""
+    s = f"{x:,.0f}"
+    s = s.replace(",", "X").replace(".", ",").replace("X", ".")
+    return s
+
+def fmt_pct(x):
+    return fmt_num(x, dec=2, signed=True, pct=True)
+
 # ==========================
 # Exibição
 # ==========================
@@ -405,22 +426,29 @@ def color_pct(val):
 
 styled = (
     df_display.style
-    .map(color_pct, subset=["% Atual", "Total return", "TR PMA"])
+    # cores: % Atual, Total return, TR PMA e P&L dia
+    .map(color_pct, subset=["% Atual", "Total return", "TR PMA", "P&L dia"])
+    # formatação numérica em padrão brasileiro
     .format({
-        "Posição": "{:,.0f}",
-        "Preço médio": "{:,.2f}",
-        "PM Ajustado": "{:,.2f}",
-        "Anterior": "{:,.2f}",
-        "Valor Anterior": "{:,.2f}",
-        "Preço": "{:,.2f}",
-        "% Atual": "{:+.2f}%",
-        "P&L dia": "{:,.2f}",
-        "Valor de Mercado": "{:,.2f}",
-        "Total investido": "{:,.2f}",
-        "Total ajustado": "{:,.2f}",
-        "Total return": "{:+.2f}%",
-        "TR PMA": "{:+.2f}%",
+        "Posição": fmt_int,
+        "Preço médio": fmt_num,
+        "PM Ajustado": fmt_num,
+        "Anterior": fmt_num,
+        "Valor Anterior": fmt_num,
+        "P&L dia": fmt_num,
+        "Preço": fmt_num,
+        "% Atual": fmt_pct,
+        "Valor de Mercado": fmt_num,
+        "Total investido": fmt_num,
+        "Total ajustado": fmt_num,
+        "Total return": fmt_pct,
+        "TR PMA": fmt_pct,
     }, na_rep="")
+    # centralizar cabeçalhos
+    .set_table_styles([
+        {"selector": "th.col_heading", "props": "text-align: center;"},
+        {"selector": "th.blank", "props": "text-align: center;"},
+    ])
 )
 
 st.dataframe(
