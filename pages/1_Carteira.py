@@ -271,10 +271,10 @@ df["Total ajustado"] = df["Posição"] * df["PM Ajustado"]
 df["P&L dia"] = df["Valor de Mercado"] - df["Valor Anterior"]
 
 # Evitar divisão por zero
-df["Total return"] = (df["Valor de Mercado"] / df["Total investido"] - 1).where(
+df["Total return"] = ((df["Valor de Mercado"] / df["Total investido"] - 1) * 100).where(
     df["Total investido"] > 0
 )
-df["TR PMA"] = (df["Valor de Mercado"] / df["Total ajustado"] - 1).where(
+df["TR PMA"] = ((df["Valor de Mercado"] / df["Total ajustado"] - 1) * 100).where(
     df["Total ajustado"] > 0
 )
 
