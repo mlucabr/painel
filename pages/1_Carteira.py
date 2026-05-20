@@ -3,8 +3,6 @@ import pandas as pd
 import yfinance as yf
 from datetime import datetime, timedelta
 
-st.title("Carteira de Investimentos")
-
 # Linha superior: título à esquerda, upload no canto superior direito
 col_title, col_upload = st.columns([3, 1])
 
