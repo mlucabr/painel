@@ -396,19 +396,6 @@ def color_pct(val):
     color = "green" if val > 0 else "red" if val < 0 else "black"
     return f"color: {color};"
 
-# ==========================
-# Download da carteira detalhada
-# ==========================
-
-csv_bytes = df_display.to_csv(index=False).encode("utf-8-sig")
-
-st.download_button(
-    label="📥 Baixar carteira detalhada (CSV)",
-    data=csv_bytes,
-    file_name="carteira_detalhada.csv",
-    mime="text/csv",
-)
-
 styled = (
     df_display.style
     .map(color_pct, subset=["% Atual", "Total return", "TR PMA"])
@@ -439,4 +426,17 @@ st.dataframe(
 st.caption(
     "Dados de preços via Yahoo Finance / yfinance (com atraso), "
     "cálculos baseados no arquivo Excel enviado."
+)
+
+# ==========================
+# Download da carteira detalhada
+# ==========================
+
+csv_bytes = df_display.to_csv(index=False).encode("utf-8-sig")
+
+st.download_button(
+    label="📥 Baixar carteira detalhada (CSV)",
+    data=csv_bytes,
+    file_name="carteira_detalhada.csv",
+    mime="text/csv",
 )
