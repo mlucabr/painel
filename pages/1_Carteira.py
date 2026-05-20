@@ -379,7 +379,8 @@ cols_order = [
     "Preço",
     "Total investido",
     "Valor de Mercado",
-    "% Atual", 
+    "% Atual",
+    "P&L dia",
     "Total return",
     "TR PMA",
     "Escopo",
@@ -413,6 +414,7 @@ styled = (
         "Valor Anterior": "{:,.2f}",
         "Preço": "{:,.2f}",
         "% Atual": "{:+.2f}%",
+        "P&L dia": "{:,.2f}",
         "Valor de Mercado": "{:,.2f}",
         "Total investido": "{:,.2f}",
         "Total ajustado": "{:,.2f}",
@@ -430,9 +432,8 @@ st.dataframe(
 )
 
 st.caption(
-    "Dados de preços via Yahoo Finance / yfinance (com atraso), "
-    "cálculos baseados no arquivo Excel enviado."
-)
+    "Cotações via Yahoo Finance / yfinance (com atraso), "
+    )
 
 # ==========================
 # Download da carteira detalhada
