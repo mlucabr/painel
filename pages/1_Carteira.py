@@ -435,7 +435,7 @@ styled = (
         "Total ajustado": "{:,.2f}",
         "Total return": "{:+.2f}%",
         "TR PMA": "{:+.2f}%",
-    })
+    }, na_rep="")
 )
 
 st.dataframe(
