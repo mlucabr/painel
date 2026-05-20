@@ -5,11 +5,11 @@ from datetime import datetime, timedelta
 
 st.title("Carteira de Investimentos")
 
-# ==========================
-# Upload do Excel + filtro de carteira na mesma linha
-# ==========================
+# Linha superior: título à esquerda, upload no canto superior direito
+col_title, col_upload = st.columns([3, 1])
 
-col_upload, col_filtro_carteira = st.columns([2, 1])
+with col_title:
+    st.title("Carteira de Investimentos")
 
 with col_upload:
     uploaded_file = st.file_uploader(
@@ -181,22 +181,21 @@ def get_quote_data(yf_ticker: str):
     }
 
 # ==========================
-# Filtro por carteira (na mesma linha do upload)
+# Filtro por carteira (abaixo do título, meia largura)
 # ==========================
 
-with col_filtro_carteira:
+col_filtro, _ = st.columns([1, 1])
+
+with col_filtro:
     carteiras_disponiveis = sorted(df_port["Carteira"].dropna().unique())
     selecionadas = st.multiselect(
         "Filtrar por carteira",
         options=carteiras_disponiveis,
         default=carteiras_disponiveis,
+        label_visibility="visible",
     )
 
 df_port_filtered = df_port[df_port["Carteira"].isin(selecionadas)]
-
-if df_port_filtered.empty:
-    st.warning("Nenhum ativo para as carteiras selecionadas.")
-    st.stop()
 
 # ==========================
 # Buscar cotações para cada ativo
