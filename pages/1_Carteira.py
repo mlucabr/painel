@@ -294,12 +294,12 @@ else:
     carteira_pct_dia = None
 
 if tot_investido > 0:
-    carteira_total_return = tot_valor_mercado / tot_investido - 1
+    carteira_total_return = (tot_valor_mercado / tot_investido - 1) * 100
 else:
     carteira_total_return = None
 
 if tot_ajustado > 0:
-    carteira_tr_pma = tot_valor_mercado / tot_ajustado - 1
+    carteira_tr_pma = (tot_valor_mercado / tot_ajustado - 1) * 100
 else:
     carteira_tr_pma = None
 
