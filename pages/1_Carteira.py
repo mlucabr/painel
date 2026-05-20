@@ -9,7 +9,7 @@ st.title("Carteira de Investimentos")
 # Upload do Excel
 # ==========================
 uploaded_file = st.file_uploader(
-    "Upload do arquivo Excel da carteira",
+    "Upload do arquivo Excel",
     type=["xlsx", "xls"]
 )
 
@@ -366,9 +366,6 @@ with col3:
 # ==========================
 # Exibição
 # ==========================
-
-st.subheader("Tabela da carteira")
-
 # Ordem das colunas para exibição
 cols_order = [
     "Carteira",
