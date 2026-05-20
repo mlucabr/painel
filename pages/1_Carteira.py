@@ -6,12 +6,16 @@ from datetime import datetime, timedelta
 st.title("Carteira de Investimentos")
 
 # ==========================
-# Upload do Excel
+# Upload do Excel + filtro de carteira na mesma linha
 # ==========================
-uploaded_file = st.file_uploader(
-    "Upload do arquivo Excel",
-    type=["xlsx", "xls"]
-)
+
+col_upload, col_filtro_carteira = st.columns([2, 1])
+
+with col_upload:
+    uploaded_file = st.file_uploader(
+        "Upload do arquivo Excel",
+        type=["xlsx", "xls"]
+    )
 
 if uploaded_file is None:
     st.info("Envie um arquivo .xlsx/.xls para ver a carteira.")
@@ -177,34 +181,21 @@ def get_quote_data(yf_ticker: str):
     }
 
 # ==========================
-# Filtro por carteira
+# Filtro por carteira (na mesma linha do upload)
 # ==========================
 
-carteiras_disponiveis = sorted(df_port["Carteira"].dropna().unique())
-selecionadas = st.multiselect(
-    "Filtrar por carteira",
-    options=carteiras_disponiveis,
-    default=carteiras_disponiveis,
-)
+with col_filtro_carteira:
+    carteiras_disponiveis = sorted(df_port["Carteira"].dropna().unique())
+    selecionadas = st.multiselect(
+        "Filtrar por carteira",
+        options=carteiras_disponiveis,
+        default=carteiras_disponiveis,
+    )
 
 df_port_filtered = df_port[df_port["Carteira"].isin(selecionadas)]
 
 if df_port_filtered.empty:
     st.warning("Nenhum ativo para as carteiras selecionadas.")
-    st.stop()
-
-# Filtro adicional por Escopo
-escopos_disponiveis = sorted(df_port_filtered["Escopo"].dropna().unique())
-escopos_selecionados = st.multiselect(
-    "Filtrar por escopo",
-    options=escopos_disponiveis,
-    default=escopos_disponiveis,
-)
-
-df_port_filtered = df_port_filtered[df_port_filtered["Escopo"].isin(escopos_selecionados)]
-
-if df_port_filtered.empty:
-    st.warning("Nenhum ativo para os escopos selecionados.")
     st.stop()
 
 # ==========================
@@ -306,17 +297,15 @@ if tot_ajustado > 0:
 else:
     carteira_tr_pma = None
 
-import math
-
 total_row = {
     "Carteira": "TOTAL",
     "Ativo": "",
-    "Posição": df["Posição"].sum(),
-    "Preço médio": float("nan"),      # antes estava None
-    "PM Ajustado": float("nan"),      # antes estava None
+    "Posição": float("nan"),  # não mostrar total de posição
+    "Preço médio": float("nan"),
+    "PM Ajustado": float("nan"),
     "Escopo": "",
-    "Anterior": float("nan"),         # antes estava None
-    "Preço": float("nan"),            # antes estava None
+    "Anterior": float("nan"),
+    "Preço": float("nan"),
     "% Atual": carteira_pct_dia if carteira_pct_dia is not None else float("nan"),
     "Valor Anterior": tot_valor_anterior,
     "Valor de Mercado": tot_valor_mercado,
@@ -331,10 +320,10 @@ total_row = {
 df_display = pd.concat([df, pd.DataFrame([total_row])], ignore_index=True)
 
 # ==========================
-# KPIs da carteira
+# KPIs da carteira (incluindo Total return)
 # ==========================
 
-col1, col2, col3 = st.columns(3)
+col1, col2, col3, col4 = st.columns(4)
 
 with col1:
     st.metric(
@@ -344,7 +333,6 @@ with col1:
     )
 
 with col2:
-    # P&L do dia = diferença vs. Valor Anterior
     pl_dia = tot_valor_mercado - tot_valor_anterior
     delta_dia = f"{carteira_pct_dia:+.2f}%" if carteira_pct_dia is not None else "-"
     st.metric(
@@ -355,17 +343,25 @@ with col2:
     )
 
 with col3:
-    delta_tr = f"{carteira_tr_pma:+.2f}%" if carteira_tr_pma is not None else "-"
+    st.metric(
+        "Total return",
+        f"{carteira_total_return:+.2f}%" if carteira_total_return is not None else "-",
+        help="Retorno acumulado da carteira em relação ao total investido."
+    )
+
+with col4:
     st.metric(
         "Total return (PMA)",
         f"{carteira_tr_pma:+.2f}%" if carteira_tr_pma is not None else "-",
-        delta=None,
         help="Retorno acumulado da carteira considerando o PM Ajustado."
     )
 
 # ==========================
 # Exibição
 # ==========================
+
+st.subheader("Tabela da carteira")
+
 # Ordem das colunas para exibição
 cols_order = [
     "Carteira",
@@ -388,6 +384,9 @@ cols_order = [
 ]
 
 df_display = df_display[cols_order]
+
+# Remover quaisquer None string em colunas de texto
+df_display = df_display.replace({None: ""})
 
 # Formatação
 def color_pct(val):
