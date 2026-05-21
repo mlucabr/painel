@@ -116,6 +116,51 @@ def read_excel_updated_at(file_obj):
     except Exception:
         return None
 
+def get_ibov_data():
+    try:
+        daily_2d = yf.download(
+            "^BVSP",
+            period="2d",
+            interval="1d",
+            auto_adjust=False,
+            progress=False,
+            multi_level_index=False,
+        )
+    except Exception:
+        daily_2d = None
+
+    if daily_2d is None or daily_2d.empty:
+        return None, None
+
+    if len(daily_2d["Close"]) >= 2:
+        prev_close = float(daily_2d["Close"].iloc[-2])
+    else:
+        prev_close = float(daily_2d["Close"].iloc[-1])
+
+    try:
+        intraday = yf.download(
+            "^BVSP",
+            period="1d",
+            interval="5m",
+            auto_adjust=False,
+            progress=False,
+            multi_level_index=False,
+        )
+    except Exception:
+        intraday = None
+
+    if intraday is not None and not intraday.empty:
+        current_price = float(intraday["Close"].iloc[-1])
+    else:
+        current_price = float(daily_2d["Close"].iloc[-1])
+
+    if prev_close and prev_close != 0:
+        delta_pct = ((current_price / prev_close) - 1) * 100
+    else:
+        delta_pct = None
+
+    return current_price, delta_pct
+
 # ==========================
 # Layout topo: voltar, título, upload
 # ==========================
@@ -533,50 +578,7 @@ total_row = {
 df_detail = df.copy()
 df_total = pd.DataFrame([total_row])
 
-ibov_pts = None
-ibov_delta_pct = None
-
-try:
-    ibov = yf.Ticker("^BVSP")
-
-    current_price = None
-    previous_close = None
-
-    # Tenta via fast_info primeiro
-    try:
-        fi = ibov.fast_info
-        current_price = fi.get("lastPrice")
-        previous_close = fi.get("previousClose")
-    except Exception:
-        pass
-
-    # Fallback via info
-    if current_price is None or previous_close is None:
-        try:
-            info = ibov.info
-            current_price = current_price or info.get("regularMarketPrice")
-            previous_close = previous_close or info.get("previousClose")
-        except Exception:
-            pass
-
-    # Fallback final via histórico diário
-    if current_price is None or previous_close is None:
-        hist = ibov.history(period="5d", auto_adjust=False)
-
-        if not hist.empty:
-            current_price = float(hist["Close"].iloc[-1])
-
-            if len(hist) >= 2:
-                previous_close = float(hist["Close"].iloc[-2])
-
-    if current_price is not None:
-        ibov_pts = float(current_price)
-
-    if current_price is not None and previous_close not in (None, 0):
-        ibov_delta_pct = (float(current_price) / float(previous_close)) - 1
-
-except Exception:
-    pass
+ibov_pts, ibov_delta_pct = get_ibov_data()
 
 # ==========================
 # KPIs da carteira (em BRL)
