@@ -533,11 +533,26 @@ total_row = {
 df_detail = df.copy()
 df_total = pd.DataFrame([total_row])
 
+ibov_pts = None
+ibov_delta_pct = None
+
+try:
+    ibov_hist = yf.Ticker("^BVSP").history(period="5d", auto_adjust=False)
+
+    if not ibov_hist.empty and len(ibov_hist) >= 2:
+        ibov_pts = float(ibov_hist["Close"].iloc[-1])
+        ibov_prev = float(ibov_hist["Close"].iloc[-2])
+
+        if ibov_prev != 0:
+            ibov_delta_pct = (ibov_pts / ibov_prev) - 1
+except Exception:
+    pass
+
 # ==========================
 # KPIs da carteira (em BRL)
 # ==========================
 
-col1, col2, col3, col4, col5, col6 = st.columns(6)
+col1, col2, col3, col4, col5, col6, col7 = st.columns(7)
 
 with col1:
     st.metric(
@@ -582,6 +597,14 @@ with col6:
         "USD/BRL",
         fmt_num(usdbrl),
         help="Cotação BRL por 1 USD obtida via Yahoo Finance (USDBRL=X)."
+    )
+
+with col7:
+    st.metric(
+        "Ibovespa",
+        fmt_num(ibov_pts, 0) if ibov_pts is not None else "-",
+        delta=fmt_pct(ibov_delta_pct) if ibov_delta_pct is not None else None,
+        help="Pontuação atual do Ibovespa (^BVSP) e variação percentual em relação ao fechamento anterior."
     )
 
 # ==========================
