@@ -4,6 +4,7 @@ import pandas as pd
 import yfinance as yf
 from datetime import datetime, timedelta
 from streamlit_autorefresh import st_autorefresh
+from pathlib import Path
 
 # Atualiza automaticamente a cada 5 minutos
 st_autorefresh(interval=5 * 60 * 1000, key="carteira_refresh")
@@ -54,6 +55,33 @@ def get_usdbrl_rate():
         return None
     return float(data["Close"].iloc[-1])
 
+def find_default_excel():
+    """
+    Procura na raiz do repo um arquivo Excel cujo nome comece com 'mlucadata'.
+    Prioridade:
+    1) mlucadata.xlsx
+    2) mlucadata.xls
+    3) mlucadata*.xlsx
+    4) mlucadata*.xls
+    Retorna um Path ou None.
+    """
+    root = Path(".")
+
+    preferred_names = [
+        root / "mlucadata.xlsx",
+        root / "mlucadata.xls",
+    ]
+
+    for file_path in preferred_names:
+        if file_path.exists() and file_path.is_file():
+            return file_path
+
+    pattern_matches = sorted(root.glob("mlucadata*.xlsx")) + sorted(root.glob("mlucadata*.xls"))
+    for file_path in pattern_matches:
+        if file_path.exists() and file_path.is_file():
+            return file_path
+
+    return None
 
 # ==========================
 # Layout topo: voltar, título, upload
@@ -70,16 +98,33 @@ with col_title:
 if "carteira_file_bytes" not in st.session_state:
     st.session_state["carteira_file_bytes"] = None
 
+if "carteira_file_name" not in st.session_state:
+    st.session_state["carteira_file_name"] = None
+
+# Tenta localizar arquivo padrão na raiz do repo
+default_excel_path = find_default_excel()
+
 with col_upload:
     uploaded_file = st.file_uploader(
         "Upload do arquivo Excel",
         type=["xlsx", "xls"]
     )
-    if uploaded_file is not None:
-        # guarda os bytes na sessão, assim sobrevivem a reruns/autorefresh
-        st.session_state["carteira_file_bytes"] = uploaded_file.getvalue()
 
-# Se ainda não temos arquivo na sessão, avisar e parar
+    # Se o usuário subir um arquivo, ele tem prioridade sobre o default da raiz
+    if uploaded_file is not None:
+        st.session_state["carteira_file_bytes"] = uploaded_file.getvalue()
+        st.session_state["carteira_file_name"] = uploaded_file.name
+
+# Se ainda não houver arquivo na sessão, tenta carregar o arquivo padrão da raiz
+if st.session_state["carteira_file_bytes"] is None and default_excel_path is not None:
+    try:
+        st.session_state["carteira_file_bytes"] = default_excel_path.read_bytes()
+        st.session_state["carteira_file_name"] = default_excel_path.name
+    except Exception as e:
+        st.error(f"Erro ao ler o arquivo padrão '{default_excel_path.name}': {e}")
+        st.stop()
+
+# Se não temos nem upload nem arquivo padrão, fica aguardando upload
 if st.session_state["carteira_file_bytes"] is None:
     st.info("Envie um arquivo .xlsx/.xls para ver a carteira.")
     st.stop()
@@ -91,6 +136,10 @@ try:
 except Exception as e:
     st.error(f"Erro ao ler o Excel: {e}")
     st.stop()
+
+# Exibe origem do arquivo carregado
+if st.session_state["carteira_file_name"]:
+    st.caption(f"Arquivo carregado: {st.session_state['carteira_file_name']}")
 
 # Conferir colunas esperadas
 expected_cols = [
