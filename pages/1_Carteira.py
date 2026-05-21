@@ -518,7 +518,7 @@ df_display = df_display.rename(columns=rename_cols)
 
 st.subheader("Tabela da carteira")
 
-# Ordem das colunas para exibição (inclui BRL)
+# Ordem completa das colunas disponíveis na tabela
 cols_order = [
     "Carteira",
     "Ativo",
@@ -591,23 +591,25 @@ styled = (
     ])
 )
 
-# Colunas visíveis por padrão (o resto fica oculto, mas pode ser mostrado pelo menu)
-
+# Colunas visíveis por padrão
+# IMPORTANTE: aqui precisam estar os nomes RENOMEADOS
 visible_cols = [
     "Carteira",
     "Ativo",
-    "Posição",
-    "PM Ajustado",
-    "Preço médio",
-    "Preço",
-    "% Atual",
-    "Valor de Mercado",
-    "Total investido",
-    "Total return",
-    "TR PMA",
+    "Custódia",
+    "PMA",
+    "PM",
+    "Cotação",
+    "% Dia",
+    "P&L Dia",
+    "Vlr Mercado",
+    "Tot Investido",
+    "Tot Return",
+    "Tot Return PMA",
     "Escopo",
-    "Data/Hora (Yahoo)",
+    "Data/Hora",
 ]
+
 st.dataframe(
     styled,
     use_container_width=True,
