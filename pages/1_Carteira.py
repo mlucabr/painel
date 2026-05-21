@@ -492,26 +492,26 @@ st.subheader("Tabela da carteira")
 cols_order = [
     "Carteira",
     "Ativo",
-    "Moeda",
     "Posição",
-    "Preço médio",
     "PM Ajustado",
-    "Escopo",
+    "Preço médio",
+    "Moeda",
+    "Preço",
+    "% Atual",
+    "P&L dia",
+    "P&L dia BRL",
+    "Valor de Mercado",
+    "Valor de Mercado BRL",
     "Anterior",
     "Valor Anterior",
     "Valor Anterior BRL",
-    "P&L dia",
-    "P&L dia BRL",
-    "Preço",
-    "% Atual",
-    "Valor de Mercado",
-    "Valor de Mercado BRL",
     "Total investido",
     "Total investido BRL",
+    "Total return",
     "Total ajustado",
     "Total ajustado BRL",
-    "Total return",
     "TR PMA",
+    "Escopo",
     "Data/Hora (Yahoo)",
     "Ticker Yahoo",
 ]
@@ -560,6 +560,24 @@ styled = (
         {"selector": "th.blank", "props": "text-align: center;"},
     ])
 )
+
+# Colunas visíveis por padrão (o resto fica oculto, mas pode ser mostrado pelo menu)
+visible_cols = [
+    "Carteira",
+    "Ativo",
+    "Posição",
+    "PM Ajustado",
+    "Preço médio",
+    "Preço",
+    "% Atual",
+    "P&L dia",
+    "Valor de Mercado",
+    "Total investido",
+    "Total return",
+    "TR PMA",
+    "Escopo",
+    "Data/Hora (Yahoo)",
+    ]
 
 st.dataframe(
     styled,
