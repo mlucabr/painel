@@ -5,22 +5,65 @@ import yfinance as yf
 from datetime import datetime, timedelta
 from streamlit_autorefresh import st_autorefresh
 
-# Atualiza automaticamente a cada 5 minutos (300.000 ms)
+# Atualiza automaticamente a cada 5 minutos
 st_autorefresh(interval=5 * 60 * 1000, key="carteira_refresh")
 
-# Botão de navegação no topo
-col_back, _ = st.columns([1, 5])
-with col_back:
-    st.page_link("streamlit_app.py", label="← Voltar para Painel", icon="🏠")
 
 # ==========================
-# Upload do Excel + filtro de carteira
+# Funções auxiliares gerais
 # ==========================
 
-# Linha superior: título à esquerda, upload no canto superior direito
+def fmt_num(x, dec=2, signed=False, pct=False):
+    if pd.isna(x):
+        return ""
+    fmt = f"{{:{'+' if signed else ''},.{dec}f}}"
+    s = fmt.format(x)
+    # troca ponto e vírgula para padrão brasileiro
+    s = s.replace(",", "X").replace(".", ",").replace("X", ".")
+    if pct:
+        s += "%"
+    return s
+
+
+def fmt_int(x):
+    if pd.isna(x):
+        return ""
+    s = f"{x:,.0f}"
+    s = s.replace(",", "X").replace(".", ",").replace("X", ".")
+    return s
+
+
+def fmt_pct(x):
+    return fmt_num(x, dec=2, signed=True, pct=True)
+
+
+def get_usdbrl_rate():
+    try:
+        data = yf.download(
+            "USDBRL=X",
+            period="2d",
+            interval="1d",
+            auto_adjust=False,
+            progress=False,
+            multi_level_index=False,
+        )
+    except Exception:
+        return None
+
+    if data is None or data.empty:
+        return None
+    return float(data["Close"].iloc[-1])
+
+
+# ==========================
+# Layout topo: voltar, título, upload
+# ==========================
+
 col_title, col_upload = st.columns([3, 1])
 
 with col_title:
+    # Botão para voltar ao Painel
+    st.page_link("streamlit_app.py", label="← Voltar para Painel", icon="🏠")
     st.title("Carteira de Investimentos")
 
 # Inicializa storage do arquivo na sessão
@@ -33,7 +76,7 @@ with col_upload:
         type=["xlsx", "xls"]
     )
     if uploaded_file is not None:
-        # guarda os bytes na sessão, assim sobreviverá aos reruns/autorefresh
+        # guarda os bytes na sessão, assim sobrevivem a reruns/autorefresh
         st.session_state["carteira_file_bytes"] = uploaded_file.getvalue()
 
 # Se ainda não temos arquivo na sessão, avisar e parar
@@ -70,10 +113,9 @@ df_port["Preço médio"] = pd.to_numeric(df_port["Preço médio"], errors="coerc
 df_port["PM Ajustado"] = pd.to_numeric(df_port["PM Ajustado"], errors="coerce").fillna(0.0)
 
 # ==========================
-# Mapeamento para Yahoo Finance
+# Mapeamento para Yahoo Finance e Moeda
 # ==========================
 
-# Mapeia ativos internacionais / especiais para Yahoo
 YF_SPECIAL = {
     # Exterior (ajuste conforme seus ativos reais)
     "IWDA": "IWDA.L",
@@ -90,6 +132,7 @@ YF_SPECIAL = {
     "EURBRL": "EURBRL=X",
 }
 
+
 def map_to_yahoo(ativo: str) -> str:
     """
     Converte o nome do ativo (coluna 'Ativo' da planilha)
@@ -103,10 +146,18 @@ def map_to_yahoo(ativo: str) -> str:
         return YF_SPECIAL[ativo]
     if ativo.endswith(".SA"):
         return ativo
-    # fallback: ativo da B3
     return f"{ativo}.SA"
 
+
 df_port["Ticker Yahoo"] = df_port["Ativo"].astype(str).apply(map_to_yahoo)
+
+# Mapa de moeda por carteira (ajuste conforme nomes reais da planilha)
+CURRENCY_BY_CARTEIRA = {
+    "Exterior": "USD",
+    "ETF.BR": "BRL",
+    "Clube": "BRL",
+}
+df_port["Moeda"] = df_port["Carteira"].map(CURRENCY_BY_CARTEIRA).fillna("BRL")
 
 # ==========================
 # Função de cotações (similar ao painel)
@@ -202,6 +253,7 @@ def get_quote_data(yf_ticker: str):
         "last_datetime": last_ts_local,
     }
 
+
 # ==========================
 # Filtro por carteira (abaixo do título, meia largura)
 # ==========================
@@ -219,11 +271,23 @@ with col_filtro:
 
 df_port_filtered = df_port[df_port["Carteira"].isin(selecionadas)]
 
+if df_port_filtered.empty:
+    st.warning("Nenhum ativo para as carteiras selecionadas.")
+    st.stop()
+
+# ==========================
+# Taxa de câmbio USDBRL
+# ==========================
+
+usdbrl = get_usdbrl_rate()
+if usdbrl is None:
+    st.error("Não foi possível obter a cotação USDBRL. Não dá para consolidar em BRL.")
+    st.stop()
+
 # ==========================
 # Buscar cotações para cada ativo
 # ==========================
 
-# Evitar chamadas duplicadas para o mesmo ticker
 unique_tickers = (
     df_port_filtered[["Ativo", "Ticker Yahoo"]]
     .drop_duplicates()
@@ -278,65 +342,94 @@ df_quotes = pd.DataFrame(quote_rows)
 df = df_port_filtered.merge(df_quotes, on=["Ativo", "Ticker Yahoo"], how="left")
 
 # ==========================
-# Cálculos de colunas derivadas
+# Cálculos de colunas derivadas (local e BRL)
 # ==========================
 
 df["Valor Anterior"] = df["Posição"] * df["Anterior"]
 df["Valor de Mercado"] = df["Posição"] * df["Preço"]
+
+df["Valor Anterior BRL"] = df.apply(
+    lambda row: row["Valor Anterior"] * usdbrl if row["Moeda"] == "USD" else row["Valor Anterior"],
+    axis=1,
+)
+df["Valor de Mercado BRL"] = df.apply(
+    lambda row: row["Valor de Mercado"] * usdbrl if row["Moeda"] == "USD" else row["Valor de Mercado"],
+    axis=1,
+)
+
 df["Total investido"] = df["Posição"] * df["Preço médio"]
 df["Total ajustado"] = df["Posição"] * df["PM Ajustado"]
 
-# P&L do dia por ativo
-df["P&L dia"] = df["Valor de Mercado"] - df["Valor Anterior"]
+df["Total investido BRL"] = df.apply(
+    lambda row: row["Total investido"] * usdbrl if row["Moeda"] == "USD" else row["Total investido"],
+    axis=1,
+)
+df["Total ajustado BRL"] = df.apply(
+    lambda row: row["Total ajustado"] * usdbrl if row["Moeda"] == "USD" else row["Total ajustado"],
+    axis=1,
+)
 
-# Evitar divisão por zero
-df["Total return"] = ((df["Valor de Mercado"] / df["Total investido"] - 1) * 100).where(
+# P&L do dia por ativo (local e BRL)
+df["P&L dia"] = df["Valor de Mercado"] - df["Valor Anterior"]
+df["P&L dia BRL"] = df.apply(
+    lambda row: row["P&L dia"] * usdbrl if row["Moeda"] == "USD" else row["P&L dia"],
+    axis=1,
+)
+
+# Retornos percentuais (não dependem de moeda)
+df["Total return"] = (df["Valor de Mercado"] / df["Total investido"] - 1).where(
     df["Total investido"] > 0
 )
-df["TR PMA"] = ((df["Valor de Mercado"] / df["Total ajustado"] - 1) * 100).where(
+df["TR PMA"] = (df["Valor de Mercado"] / df["Total ajustado"] - 1).where(
     df["Total ajustado"] > 0
 )
 
 # ==========================
-# Linha totalizadora
+# Linha totalizadora (em BRL)
 # ==========================
 
-tot_valor_anterior = df["Valor Anterior"].sum()
-tot_valor_mercado = df["Valor de Mercado"].sum()
-tot_investido = df["Total investido"].sum()
-tot_ajustado = df["Total ajustado"].sum()
-tot_pl_dia = df["P&L dia"].sum()
+tot_valor_anterior_brl = df["Valor Anterior BRL"].sum()
+tot_valor_mercado_brl = df["Valor de Mercado BRL"].sum()
+tot_investido_brl = df["Total investido BRL"].sum()
+tot_ajustado_brl = df["Total ajustado BRL"].sum()
+tot_pl_dia_brl = df["P&L dia BRL"].sum()
 
-if tot_valor_anterior > 0:
-    carteira_pct_dia = (tot_valor_mercado / tot_valor_anterior - 1) * 100
+if tot_valor_anterior_brl > 0:
+    carteira_pct_dia = (tot_valor_mercado_brl / tot_valor_anterior_brl - 1) * 100
 else:
     carteira_pct_dia = None
 
-if tot_investido > 0:
-    carteira_total_return = (tot_valor_mercado / tot_investido - 1) * 100
+if tot_investido_brl > 0:
+    carteira_total_return = tot_valor_mercado_brl / tot_investido_brl - 1
 else:
     carteira_total_return = None
 
-if tot_ajustado > 0:
-    carteira_tr_pma = (tot_valor_mercado / tot_ajustado - 1) * 100
+if tot_ajustado_brl > 0:
+    carteira_tr_pma = tot_valor_mercado_brl / tot_ajustado_brl - 1
 else:
     carteira_tr_pma = None
 
 total_row = {
     "Carteira": "TOTAL",
     "Ativo": "",
-    "Posição": float("nan"),  # não mostrar total de posição
+    "Moeda": "",
+    "Posição": float("nan"),
     "Preço médio": float("nan"),
     "PM Ajustado": float("nan"),
     "Escopo": "",
     "Anterior": float("nan"),
+    "Valor Anterior": float("nan"),
+    "Valor Anterior BRL": tot_valor_anterior_brl,
+    "P&L dia": float("nan"),
+    "P&L dia BRL": tot_pl_dia_brl,
     "Preço": float("nan"),
     "% Atual": carteira_pct_dia if carteira_pct_dia is not None else float("nan"),
-    "Valor Anterior": tot_valor_anterior,
-    "P&L dia": tot_pl_dia,
-    "Valor de Mercado": tot_valor_mercado,
-    "Total investido": tot_investido,
-    "Total ajustado": tot_ajustado,
+    "Valor de Mercado": float("nan"),
+    "Valor de Mercado BRL": tot_valor_mercado_brl,
+    "Total investido": float("nan"),
+    "Total investido BRL": tot_investido_brl,
+    "Total ajustado": float("nan"),
+    "Total ajustado BRL": tot_ajustado_brl,
     "Total return": carteira_total_return if carteira_total_return is not None else float("nan"),
     "TR PMA": carteira_tr_pma if carteira_tr_pma is not None else float("nan"),
     "Ticker Yahoo": "",
@@ -346,62 +439,40 @@ total_row = {
 df_display = pd.concat([df, pd.DataFrame([total_row])], ignore_index=True)
 
 # ==========================
-# KPIs da carteira (incluindo Total return)
+# KPIs da carteira (em BRL)
 # ==========================
 
 col1, col2, col3, col4 = st.columns(4)
 
 with col1:
     st.metric(
-        "Valor de Mercado da Carteira",
-        f"{tot_valor_mercado:,.2f}",
-        help="Somatório da coluna 'Valor de Mercado' para as carteiras filtradas."
+        "Valor de Mercado (BRL)",
+        fmt_num(tot_valor_mercado_brl),
+        help="Somatório da coluna 'Valor de Mercado BRL' para as carteiras filtradas."
     )
 
 with col2:
-    pl_dia = tot_valor_mercado - tot_valor_anterior
-    delta_dia = f"{carteira_pct_dia:+.2f}%" if carteira_pct_dia is not None else "-"
+    delta_dia = fmt_pct(carteira_pct_dia) if carteira_pct_dia is not None else "-"
     st.metric(
-        "P&L do dia",
-        f"{pl_dia:,.2f}",
+        "P&L do dia (BRL)",
+        fmt_num(tot_pl_dia_brl),
         delta=delta_dia,
-        help="Variação da carteira hoje em relação ao fechamento anterior."
+        help="Variação da carteira hoje em BRL em relação ao fechamento anterior."
     )
 
 with col3:
     st.metric(
         "Total return",
-        f"{carteira_total_return:+.2f}%" if carteira_total_return is not None else "-",
-        help="Retorno acumulado da carteira em relação ao total investido."
+        fmt_pct(carteira_total_return) if carteira_total_return is not None else "-",
+        help="Retorno acumulado da carteira em relação ao total investido (BRL)."
     )
 
 with col4:
     st.metric(
         "Total return (PMA)",
-        f"{carteira_tr_pma:+.2f}%" if carteira_tr_pma is not None else "-",
-        help="Retorno acumulado da carteira considerando o PM Ajustado."
+        fmt_pct(carteira_tr_pma) if carteira_tr_pma is not None else "-",
+        help="Retorno acumulado da carteira considerando o PM Ajustado (BRL)."
     )
-
-def fmt_num(x, dec=2, signed=False, pct=False):
-    if pd.isna(x):
-        return ""
-    fmt = f"{{:{'+' if signed else ''},.{dec}f}}"
-    s = fmt.format(x)
-    # troca ponto e vírgula para padrão brasileiro
-    s = s.replace(",", "X").replace(".", ",").replace("X", ".")
-    if pct:
-        s += "%"
-    return s
-
-def fmt_int(x):
-    if pd.isna(x):
-        return ""
-    s = f"{x:,.0f}"
-    s = s.replace(",", "X").replace(".", ",").replace("X", ".")
-    return s
-
-def fmt_pct(x):
-    return fmt_num(x, dec=2, signed=True, pct=True)
 
 # ==========================
 # Exibição
@@ -409,61 +480,73 @@ def fmt_pct(x):
 
 st.subheader("Tabela da carteira")
 
-# Ordem das colunas para exibição
+# Ordem das colunas para exibição (inclui BRL)
 cols_order = [
     "Carteira",
     "Ativo",
+    "Moeda",
     "Posição",
-    "PM Ajustado",
     "Preço médio",
-    "Preço",
-    "Total investido",
-    "Valor de Mercado",
-    "% Atual",
-    "P&L dia",
-    "Total return",
-    "TR PMA",
+    "PM Ajustado",
     "Escopo",
-    "Total ajustado",
     "Anterior",
     "Valor Anterior",
+    "Valor Anterior BRL",
+    "P&L dia",
+    "P&L dia BRL",
+    "Preço",
+    "% Atual",
+    "Valor de Mercado",
+    "Valor de Mercado BRL",
+    "Total investido",
+    "Total investido BRL",
+    "Total ajustado",
+    "Total ajustado BRL",
+    "Total return",
+    "TR PMA",
     "Data/Hora (Yahoo)",
     "Ticker Yahoo",
 ]
 
 df_display = df_display[cols_order]
 
-# Remover quaisquer None string em colunas de texto
+# Remover quaisquer None em colunas de texto
 df_display = df_display.replace({None: ""})
 
-# Formatação
+# Formatação e cores
 def color_pct(val):
     if pd.isna(val):
         return ""
     color = "green" if val > 0 else "red" if val < 0 else "black"
     return f"color: {color};"
 
+
 styled = (
     df_display.style
-    # cores: % Atual, Total return, TR PMA e P&L dia
-    .map(color_pct, subset=["% Atual", "Total return", "TR PMA", "P&L dia"])
-    # formatação numérica em padrão brasileiro
+    .map(
+        color_pct,
+        subset=["% Atual", "Total return", "TR PMA", "P&L dia", "P&L dia BRL"]
+    )
     .format({
         "Posição": fmt_int,
         "Preço médio": fmt_num,
         "PM Ajustado": fmt_num,
         "Anterior": fmt_num,
         "Valor Anterior": fmt_num,
+        "Valor Anterior BRL": fmt_num,
         "P&L dia": fmt_num,
+        "P&L dia BRL": fmt_num,
         "Preço": fmt_num,
         "% Atual": fmt_pct,
         "Valor de Mercado": fmt_num,
+        "Valor de Mercado BRL": fmt_num,
         "Total investido": fmt_num,
+        "Total investido BRL": fmt_num,
         "Total ajustado": fmt_num,
+        "Total ajustado BRL": fmt_num,
         "Total return": fmt_pct,
         "TR PMA": fmt_pct,
     }, na_rep="")
-    # centralizar cabeçalhos
     .set_table_styles([
         {"selector": "th.col_heading", "props": "text-align: center;"},
         {"selector": "th.blank", "props": "text-align: center;"},
@@ -479,8 +562,9 @@ st.dataframe(
 )
 
 st.caption(
-    "Cotações via Yahoo Finance / yfinance (com atraso), "
-    )
+    "Dados de preços via Yahoo Finance / yfinance (com atraso), "
+    "cálculos baseados no arquivo Excel enviado. Valores consolidados em BRL."
+)
 
 # ==========================
 # Download da carteira detalhada
