@@ -455,6 +455,7 @@ with col1:
     )
 
 with col2:
+    delta_dia = fmt_pct(carteira_pct_dia) if carteira_pct_dia is not None else "-"
     st.metric(
         "P&L Dia (original)",
         fmt_num(tot_pl_dia),
@@ -463,8 +464,7 @@ with col2:
     )
 
 with col3:
-    delta_dia = fmt_pct(carteira_pct_dia) if carteira_pct_dia is not None else "-"
-    st.metric(
+        st.metric(
         "P&L Dia (BRL)",
         fmt_num(tot_pl_dia_brl),
         delta=delta_dia,
