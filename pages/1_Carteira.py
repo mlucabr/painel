@@ -537,14 +537,44 @@ ibov_pts = None
 ibov_delta_pct = None
 
 try:
-    ibov_hist = yf.Ticker("^BVSP").history(period="5d", auto_adjust=False)
+    ibov = yf.Ticker("^BVSP")
 
-    if not ibov_hist.empty and len(ibov_hist) >= 2:
-        ibov_pts = float(ibov_hist["Close"].iloc[-1])
-        ibov_prev = float(ibov_hist["Close"].iloc[-2])
+    current_price = None
+    previous_close = None
 
-        if ibov_prev != 0:
-            ibov_delta_pct = (ibov_pts / ibov_prev) - 1
+    # Tenta via fast_info primeiro
+    try:
+        fi = ibov.fast_info
+        current_price = fi.get("lastPrice")
+        previous_close = fi.get("previousClose")
+    except Exception:
+        pass
+
+    # Fallback via info
+    if current_price is None or previous_close is None:
+        try:
+            info = ibov.info
+            current_price = current_price or info.get("regularMarketPrice")
+            previous_close = previous_close or info.get("previousClose")
+        except Exception:
+            pass
+
+    # Fallback final via histórico diário
+    if current_price is None or previous_close is None:
+        hist = ibov.history(period="5d", auto_adjust=False)
+
+        if not hist.empty:
+            current_price = float(hist["Close"].iloc[-1])
+
+            if len(hist) >= 2:
+                previous_close = float(hist["Close"].iloc[-2])
+
+    if current_price is not None:
+        ibov_pts = float(current_price)
+
+    if current_price is not None and previous_close not in (None, 0):
+        ibov_delta_pct = (float(current_price) / float(previous_close)) - 1
+
 except Exception:
     pass
 
