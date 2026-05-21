@@ -377,12 +377,13 @@ df["P&L dia BRL"] = df.apply(
 )
 
 # Retornos percentuais (não dependem de moeda)
-df["Total return"] = (df["Valor de Mercado"] / df["Total investido"] - 1).where(
-    df["Total investido"] > 0
-)
-df["TR PMA"] = (df["Valor de Mercado"] / df["Total ajustado"] - 1).where(
-    df["Total ajustado"] > 0
-)
+df["Total return"] = (
+    (df["Valor de Mercado"] / df["Total investido"] - 1) * 100
+).where(df["Total investido"] > 0)
+
+df["TR PMA"] = (
+    (df["Valor de Mercado"] / df["Total ajustado"] - 1) * 100
+).where(df["Total ajustado"] > 0)
 
 # ==========================
 # Linha totalizadora (em BRL)
@@ -400,12 +401,12 @@ else:
     carteira_pct_dia = None
 
 if tot_investido_brl > 0:
-    carteira_total_return = tot_valor_mercado_brl / tot_investido_brl - 1
+    carteira_total_return = (tot_valor_mercado_brl / tot_investido_brl - 1) * 100
 else:
     carteira_total_return = None
 
 if tot_ajustado_brl > 0:
-    carteira_tr_pma = tot_valor_mercado_brl / tot_ajustado_brl - 1
+    carteira_tr_pma = (tot_valor_mercado_brl / tot_ajustado_brl - 1) * 100
 else:
     carteira_tr_pma = None
 
@@ -442,7 +443,7 @@ df_display = pd.concat([df, pd.DataFrame([total_row])], ignore_index=True)
 # KPIs da carteira (em BRL)
 # ==========================
 
-col1, col2, col3, col4 = st.columns(4)
+col1, col2, col3, col4, col5 = st.columns(5)
 
 with col1:
     st.metric(
@@ -462,16 +463,23 @@ with col2:
 
 with col3:
     st.metric(
-        "Total return",
+        "Total Return",
         fmt_pct(carteira_total_return) if carteira_total_return is not None else "-",
         help="Retorno acumulado da carteira em relação ao total investido (BRL)."
     )
 
 with col4:
     st.metric(
-        "Total return (PMA)",
+        "Total Return (PMA)",
         fmt_pct(carteira_tr_pma) if carteira_tr_pma is not None else "-",
         help="Retorno acumulado da carteira considerando o PM Ajustado (BRL)."
+    )
+
+with col5:
+    st.metric(
+        "BRL/USD (USDBRL=X)",
+        fmt_num(usdbrl),
+        help="Cotação BRL por 1 USD obtida via Yahoo Finance (USDBRL=X)."
     )
 
 # ==========================
