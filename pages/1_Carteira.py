@@ -449,7 +449,7 @@ with col1:
     st.metric(
         "Valor de Mercado (BRL)",
         fmt_num(tot_valor_mercado_brl),
-        help="Somatório da coluna 'Valor de Mercado BRL' para as carteiras filtradas."
+        help="Somatório do Valor de Mercado (BRL) para as carteiras selecionadas."
     )
 
 with col2:
@@ -458,7 +458,7 @@ with col2:
         "P&L do dia (BRL)",
         fmt_num(tot_pl_dia_brl),
         delta=delta_dia,
-        help="Variação da carteira hoje em BRL em relação ao fechamento anterior."
+        help="Variação da carteira hoje em BRL em relação ao fechamento do dia anterior."
     )
 
 with col3:
@@ -472,12 +472,12 @@ with col4:
     st.metric(
         "Total Return (PMA)",
         fmt_pct(carteira_tr_pma) if carteira_tr_pma is not None else "-",
-        help="Retorno acumulado da carteira considerando o PM Ajustado (BRL)."
+        help="Retorno acumulado da carteira considerando o Preço Mádio Ajustado (BRL)."
     )
 
 with col5:
     st.metric(
-        "BRL/USD (USDBRL=X)",
+        "USD/BRL",
         fmt_num(usdbrl),
         help="Cotação BRL por 1 USD obtida via Yahoo Finance (USDBRL=X)."
     )
