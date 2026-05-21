@@ -517,7 +517,71 @@ rename_cols = {
 df_detail = df_detail.rename(columns=rename_cols)
 df_total = df_total.rename(columns=rename_cols)
 
+cols_order = [
+    "Carteira",
+    "Ativo",
+    "Custódia",
+    "PMA",
+    "PM",
+    "Moeda",
+    "Cotação",
+    "% Dia",
+    "P&L Dia",
+    "P&L Dia(BRL)",
+    "Vlr Mercado",
+    "Vlr Mercado(BRL)",
+    "Fech Ant",
+    "Vlr Ant",
+    "Vlr Ant(BRL)",
+    "Tot Investido",
+    "Tot Investido(BRL)",
+    "Tot Return",
+    "Tot Ajust.Prov",
+    "Tot Ajust.Prov(BRL)",
+    "Tot Return PMA",
+    "Escopo",
+    "Data/Hora",
+    "Ticker",
+]
+
+df_detail = df_detail[cols_order].replace({None: ""})
+df_total = df_total[cols_order].replace({None: ""})
+
 st.subheader("Tabela da carteira")
+
+def color_pct(val):
+    if pd.isna(val):
+        return ""
+    color = "green" if val > 0 else "red" if val < 0 else "black"
+    return f"color: {color};"
+
+styled_detail = (
+    df_detail.style
+    .map(
+        color_pct,
+        subset=["% Dia", "Tot Return", "Tot Return PMA", "P&L Dia", "P&L Dia(BRL)"]
+    )
+    .format({
+        "Custódia": fmt_int,
+        "PM": fmt_num,
+        "PMA": fmt_num,
+        "Fech Ant": fmt_num,
+        "Vlr Ant": fmt_num,
+        "Vlr Ant(BRL)": fmt_num,
+        "P&L Dia": fmt_num,
+        "P&L Dia(BRL)": fmt_num,
+        "Cotação": fmt_num,
+        "% Dia": fmt_pct,
+        "Vlr Mercado": fmt_num,
+        "Vlr Mercado(BRL)": fmt_num,
+        "Tot Investido": fmt_num,
+        "Tot Investido(BRL)": fmt_num,
+        "Tot Ajust.Prov": fmt_num,
+        "Tot Ajust.Prov(BRL)": fmt_num,
+        "Tot Return": fmt_pct,
+        "Tot Return PMA": fmt_pct,
+    }, na_rep="")
+)
 
 visible_cols = [
     "Carteira",
@@ -547,80 +611,27 @@ st.dataframe(
 
 st.markdown("### Total consolidado")
 
-st.table(df_total[visible_cols].style.format({
-    "Custódia": fmt_int,
-    "PMA": fmt_num,
-    "PM": fmt_num,
-    "Cotação": fmt_num,
-    "% Dia": fmt_pct,
-    "P&L Dia": fmt_num,
-    "Vlr Mercado": fmt_num,
-    "Tot Investido": fmt_num,
-    "Tot Return": fmt_pct,
-    "Tot Return PMA": fmt_pct,
-}, na_rep=""))
-)
-
 styled_total = (
-    df_total.style
+    df_total[visible_cols].style
     .map(
         color_pct,
-        subset=["% Dia", "Tot Return", "Tot Return PMA", "P&L Dia", "P&L Dia(BRL)"]
+        subset=["% Dia", "Tot Return", "Tot Return PMA", "P&L Dia"]
     )
     .format({
         "Custódia": fmt_int,
-        "PM": fmt_num,
         "PMA": fmt_num,
-        "Fech Ant": fmt_num,
-        "Vlr Ant": fmt_num,
-        "Vlr Ant(BRL)": fmt_num,
-        "P&L Dia": fmt_num,
-        "P&L Dia(BRL)": fmt_num,
+        "PM": fmt_num,
         "Cotação": fmt_num,
         "% Dia": fmt_pct,
+        "P&L Dia": fmt_num,
         "Vlr Mercado": fmt_num,
-        "Vlr Mercado(BRL)": fmt_num,
         "Tot Investido": fmt_num,
-        "Tot Investido(BRL)": fmt_num,
-        "Tot Ajust.Prov": fmt_num,
-        "Tot Ajust.Prov(BRL)": fmt_num,
         "Tot Return": fmt_pct,
         "Tot Return PMA": fmt_pct,
     }, na_rep="")
 )
-    .set_table_styles([
-        {"selector": "th.col_heading", "props": "text-align: center;"},
-        {"selector": "th.blank", "props": "text-align: center;"},
-    ])
-)
 
-# Colunas visíveis por padrão
-# IMPORTANTE: aqui precisam estar os nomes RENOMEADOS
-visible_cols = [
-    "Carteira",
-    "Ativo",
-    "Custódia",
-    "PMA",
-    "PM",
-    "Cotação",
-    "% Dia",
-    "P&L Dia",
-    "Vlr Mercado",
-    "Tot Investido",
-    "Tot Return",
-    "Tot Return PMA",
-    "Escopo",
-    "Data/Hora",
-]
-
-st.dataframe(
-    styled,
-    use_container_width=True,
-    hide_index=True,
-    height="content",
-    row_height=24,
-    column_order=visible_cols,
-)
+st.table(styled_total)
 
 st.caption(
     "Dados de preços via Yahoo Finance / yfinance (com atraso), "
@@ -631,7 +642,8 @@ st.caption(
 # Download da carteira detalhada
 # ==========================
 
-csv_bytes = df_display.to_csv(index=False).encode("utf-8-sig")
+csv_export = pd.concat([df_detail, df_total], ignore_index=True)
+csv_bytes = csv_export.to_csv(index=False).encode("utf-8-sig")
 
 st.download_button(
     label="📥 Baixar carteira detalhada (CSV)",
