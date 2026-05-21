@@ -1,12 +1,21 @@
+import io
 import streamlit as st
 import pandas as pd
 import yfinance as yf
 from datetime import datetime, timedelta
+from streamlit_autorefresh import st_autorefresh
+
+# Atualiza automaticamente a cada 5 minutos (300.000 ms)
+st_autorefresh(interval=5 * 60 * 1000, key="carteira_refresh")
 
 # Botão de navegação no topo
 col_back, _ = st.columns([1, 5])
 with col_back:
     st.page_link("streamlit_app.py", label="← Voltar para Painel", icon="🏠")
+
+# ==========================
+# Upload do Excel + filtro de carteira
+# ==========================
 
 # Linha superior: título à esquerda, upload no canto superior direito
 col_title, col_upload = st.columns([3, 1])
@@ -14,18 +23,28 @@ col_title, col_upload = st.columns([3, 1])
 with col_title:
     st.title("Carteira de Investimentos")
 
+# Inicializa storage do arquivo na sessão
+if "carteira_file_bytes" not in st.session_state:
+    st.session_state["carteira_file_bytes"] = None
+
 with col_upload:
     uploaded_file = st.file_uploader(
         "Upload do arquivo Excel",
         type=["xlsx", "xls"]
     )
+    if uploaded_file is not None:
+        # guarda os bytes na sessão, assim sobreviverá aos reruns/autorefresh
+        st.session_state["carteira_file_bytes"] = uploaded_file.getvalue()
 
-if uploaded_file is None:
+# Se ainda não temos arquivo na sessão, avisar e parar
+if st.session_state["carteira_file_bytes"] is None:
     st.info("Envie um arquivo .xlsx/.xls para ver a carteira.")
     st.stop()
 
+# Lê o Excel a partir dos bytes armazenados
 try:
-    df_raw = pd.read_excel(uploaded_file)
+    file_bytes = st.session_state["carteira_file_bytes"]
+    df_raw = pd.read_excel(io.BytesIO(file_bytes))
 except Exception as e:
     st.error(f"Erro ao ler o Excel: {e}")
     st.stop()
