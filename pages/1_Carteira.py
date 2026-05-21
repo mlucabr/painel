@@ -83,6 +83,39 @@ def find_default_excel():
 
     return None
 
+def read_excel_updated_at(file_obj):
+    """
+    Lê a data de atualização da aba Controle, célula B1.
+    Retorna string formatada ou None.
+    """
+    try:
+        if isinstance(file_obj, (bytes, bytearray)):
+            excel_source = io.BytesIO(file_obj)
+        else:
+            excel_source = file_obj
+
+        value = pd.read_excel(
+            excel_source,
+            sheet_name="Controle",
+            header=None,
+            usecols="B",
+            nrows=1,
+        ).iloc[0, 0]
+
+        if pd.isna(value):
+            return None
+
+        ts = pd.to_datetime(value, errors="coerce")
+        if pd.notna(ts):
+            if ts.hour == 0 and ts.minute == 0 and ts.second == 0:
+                return ts.strftime("%d/%m/%Y")
+            return ts.strftime("%d/%m/%Y %H:%M")
+
+        return str(value)
+
+    except Exception:
+        return None
+
 # ==========================
 # Layout topo: voltar, título, upload
 # ==========================
@@ -132,15 +165,25 @@ if st.session_state["carteira_file_bytes"] is None:
 # Lê o Excel a partir dos bytes armazenados
 try:
     file_bytes = st.session_state["carteira_file_bytes"]
-    df_raw = pd.read_excel(io.BytesIO(file_bytes))
+
+    # Lê metadado da aba Controle
+    excel_updated_at = read_excel_updated_at(file_bytes)
+
+    # Lê a planilha principal da carteira
+    df_raw = pd.read_excel(io.BytesIO(file_bytes), sheet_name="upload_data")
 except Exception as e:
     st.error(f"Erro ao ler o Excel: {e}")
     st.stop()
-
+    
 # Exibe origem do arquivo carregado
 if st.session_state["carteira_file_name"]:
-    st.caption(f"Arquivo carregado: {st.session_state['carteira_file_name']}")
+    file_name = st.session_state["carteira_file_name"]
 
+    if excel_updated_at:
+        st.caption(f"Arquivo carregado: {file_name} | Atualizado: {excel_updated_at}")
+    else:
+        st.caption(f"Arquivo carregado: {file_name}")
+        
 # Conferir colunas esperadas
 expected_cols = [
     "Ativo",
