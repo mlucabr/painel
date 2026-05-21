@@ -509,7 +509,7 @@ rename_cols = {
     "Total ajustado": "Tot Ajust.Prov",
     "Total ajustado BRL": "Tot Ajust.Prov(BRL)",
     "Total return": "Tot Return",
-    "TR PMA": "Tot Retur PMA",
+    "TR PMA": "Tot Return PMA",
     "Data/Hora (Yahoo)": "Data/Hora",
     "Ticker Yahoo": "Ticker",
 }
