@@ -437,7 +437,8 @@ total_row = {
     "Data/Hora (Yahoo)": "",
 }
 
-df_display = pd.concat([df, pd.DataFrame([total_row])], ignore_index=True)
+df_detail = df.copy()
+df_total = pd.DataFrame([total_row])
 
 # ==========================
 # KPIs da carteira (em BRL)
@@ -486,7 +487,6 @@ with col5:
 # Exibição
 # ==========================
 
-# Renomear cabeçalhos para exibição
 rename_cols = {
     "Carteira": "Carteira",
     "Ativo": "Ativo",
@@ -514,53 +514,55 @@ rename_cols = {
     "Ticker Yahoo": "Ticker",
 }
 
-df_display = df_display.rename(columns=rename_cols)
+df_detail = df_detail.rename(columns=rename_cols)
+df_total = df_total.rename(columns=rename_cols)
 
 st.subheader("Tabela da carteira")
 
-# Ordem completa das colunas disponíveis na tabela
-cols_order = [
+visible_cols = [
     "Carteira",
     "Ativo",
     "Custódia",
     "PMA",
     "PM",
-    "Moeda",
     "Cotação",
     "% Dia",
     "P&L Dia",
-    "P&L Dia(BRL)",
     "Vlr Mercado",
-    "Vlr Mercado(BRL)",
-    "Fech Ant",
-    "Vlr Ant",
-    "Vlr Ant(BRL)",
     "Tot Investido",
-    "Tot Investido(BRL)",
     "Tot Return",
-    "Tot Ajust.Prov",
-    "Tot Ajust.Prov(BRL)",
     "Tot Return PMA",
     "Escopo",
     "Data/Hora",
-    "Ticker",
 ]
 
-df_display = df_display[cols_order]
+st.dataframe(
+    styled_detail,
+    use_container_width=True,
+    hide_index=True,
+    height="content",
+    row_height=24,
+    column_order=visible_cols,
+)
 
-# Remover quaisquer None em colunas de texto
-df_display = df_display.replace({None: ""})
+st.markdown("### Total consolidado")
 
-# Formatação e cores
-def color_pct(val):
-    if pd.isna(val):
-        return ""
-    color = "green" if val > 0 else "red" if val < 0 else "black"
-    return f"color: {color};"
+st.table(df_total[visible_cols].style.format({
+    "Custódia": fmt_int,
+    "PMA": fmt_num,
+    "PM": fmt_num,
+    "Cotação": fmt_num,
+    "% Dia": fmt_pct,
+    "P&L Dia": fmt_num,
+    "Vlr Mercado": fmt_num,
+    "Tot Investido": fmt_num,
+    "Tot Return": fmt_pct,
+    "Tot Return PMA": fmt_pct,
+}, na_rep=""))
+)
 
-
-styled = (
-    df_display.style
+styled_total = (
+    df_total.style
     .map(
         color_pct,
         subset=["% Dia", "Tot Return", "Tot Return PMA", "P&L Dia", "P&L Dia(BRL)"]
@@ -585,6 +587,7 @@ styled = (
         "Tot Return": fmt_pct,
         "Tot Return PMA": fmt_pct,
     }, na_rep="")
+)
     .set_table_styles([
         {"selector": "th.col_heading", "props": "text-align: center;"},
         {"selector": "th.blank", "props": "text-align: center;"},
