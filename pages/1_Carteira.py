@@ -609,30 +609,6 @@ st.dataframe(
     column_order=visible_cols,
 )
 
-st.markdown("### Total consolidado")
-
-styled_total = (
-    df_total[visible_cols].style
-    .map(
-        color_pct,
-        subset=["% Dia", "Tot Return", "Tot Return PMA", "P&L Dia"]
-    )
-    .format({
-        "Custódia": fmt_int,
-        "PMA": fmt_num,
-        "PM": fmt_num,
-        "Cotação": fmt_num,
-        "% Dia": fmt_pct,
-        "P&L Dia": fmt_num,
-        "Vlr Mercado": fmt_num,
-        "Tot Investido": fmt_num,
-        "Tot Return": fmt_pct,
-        "Tot Return PMA": fmt_pct,
-    }, na_rep="")
-)
-
-st.table(styled_total)
-
 st.caption(
     "Dados de preços via Yahoo Finance / yfinance (com atraso), "
     "cálculos baseados no arquivo Excel enviado. Valores consolidados em BRL."
