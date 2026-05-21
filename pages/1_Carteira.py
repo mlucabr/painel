@@ -592,29 +592,29 @@ styled = (
 )
 
 # Colunas visíveis por padrão (o resto fica oculto, mas pode ser mostrado pelo menu)
+
 visible_cols = [
     "Carteira",
     "Ativo",
     "Posição",
-    "PMA",
-    "PM",
-    "Cotação",
-    "% Dia",
-    "P&L Dia",
-    "Vlr Mercado",
-    "Tot Investido",
-    "Tot Return",
-    "Tot Return PMA",
+    "PM Ajustado",
+    "Preço médio",
+    "Preço",
+    "% Atual",
+    "Valor de Mercado",
+    "Total investido",
+    "Total return",
+    "TR PMA",
     "Escopo",
-    "Data/Hora",
-    ]
-
+    "Data/Hora (Yahoo)",
+]
 st.dataframe(
     styled,
     use_container_width=True,
     hide_index=True,
     height="content",
     row_height=24,
+    column_order=visible_cols,
 )
 
 st.caption(
