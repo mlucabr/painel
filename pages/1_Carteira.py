@@ -394,6 +394,7 @@ tot_valor_mercado_brl = df["Valor de Mercado BRL"].sum()
 tot_investido_brl = df["Total investido BRL"].sum()
 tot_ajustado_brl = df["Total ajustado BRL"].sum()
 tot_pl_dia_brl = df["P&L dia BRL"].sum()
+tot_pl_dia = df["P&L dia"].sum()
 
 if tot_valor_anterior_brl > 0:
     carteira_pct_dia = (tot_valor_mercado_brl / tot_valor_anterior_brl - 1) * 100
@@ -444,7 +445,7 @@ df_total = pd.DataFrame([total_row])
 # KPIs da carteira (em BRL)
 # ==========================
 
-col1, col2, col3, col4, col5 = st.columns(5)
+col1, col2, col3, col4, col5, col6 = st.columns(6)
 
 with col1:
     st.metric(
@@ -454,29 +455,37 @@ with col1:
     )
 
 with col2:
+    st.metric(
+        "P&L Dia (original)",
+        fmt_num(tot_pl_dia),
+        delta=delta_dia,
+        help="Variação da carteira hoje somando o P&L de cada ativo em sua moeda original, sem conversão para BRL."
+    )
+
+with col3:
     delta_dia = fmt_pct(carteira_pct_dia) if carteira_pct_dia is not None else "-"
     st.metric(
-        "P&L do dia (BRL)",
+        "P&L Dia (BRL)",
         fmt_num(tot_pl_dia_brl),
         delta=delta_dia,
         help="Variação da carteira hoje em BRL em relação ao fechamento do dia anterior."
     )
 
-with col3:
+with col4:
     st.metric(
         "Total Return",
         fmt_pct(carteira_total_return) if carteira_total_return is not None else "-",
         help="Retorno acumulado da carteira em relação ao total investido (BRL)."
     )
 
-with col4:
+with col5:
     st.metric(
         "Total Return (PMA)",
         fmt_pct(carteira_tr_pma) if carteira_tr_pma is not None else "-",
         help="Retorno acumulado da carteira considerando o Preço Mádio Ajustado (BRL)."
     )
 
-with col5:
+with col6:
     st.metric(
         "USD/BRL",
         fmt_num(usdbrl),
