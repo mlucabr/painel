@@ -720,10 +720,14 @@ st.caption(
 # ==========================
 
 csv_export = pd.concat([df_detail, df_total], ignore_index=True)
-csv_bytes = csv_export.to_csv(index=False).encode("utf-8-sig")
+csv_bytes = csv_export.to_csv(
+    index=False,
+    sep=";",
+    decimal=","
+).encode("utf-8-sig")
 
 st.download_button(
-    label="📥 Baixar carteira detalhada (CSV)",
+    label="📥 Baixar carteira (CSV)",
     data=csv_bytes,
     file_name="carteira_detalhada.csv",
     mime="text/csv",
