@@ -3,6 +3,7 @@ from streamlit_autorefresh import st_autorefresh
 import yfinance as yf
 import pandas as pd
 from datetime import datetime, timedelta
+from pathlib import Path
 
 # ==========================
 # Configurações iniciais
@@ -20,87 +21,53 @@ with st.sidebar:
 # Autorefresh a cada 5 minutos (300.000 ms)
 st_autorefresh(interval=5 * 60 * 1000, key="datarefresh")
 
-# ==========================
-# Mapeamento de tickers
-# ==========================
+def find_default_excel():
+    root = Path(".")
+    preferred_names = [
+        root / "mlucadata.xlsx",
+        root / "mlucadata.xls",
+    ]
 
-# Dicionário: nome amigável -> ticker no Yahoo Finance
-TICKERS = {
-    # Exterior (UCITS / EUA)
-    "IWDA": "IWDA.L",   # iShares Core MSCI World UCITS
-    "IWQU": "IWQU.L",    # iShares Edge MSCI World Quality UCITS
-    "WSML": "WSML.L",    # iShares MSCI World Small Cap UCITS
-    "EMVL": "EMVL.L",    # iShares EM Value Factor UCITS
-    "IWVL": "IWVL.L",    # iShares World Value Factor UCITS
-    "IFSW": "IFSW.L",    # iShares STOXX World Equity Multifactor UCITS
-    "BITW": "BITW",      # Bitwise 10 Crypto Index Fund
+    for file_path in preferred_names:
+        if file_path.exists() and file_path.is_file():
+            return file_path
 
-    # ETFs B3
-    "HASH11": "HASH11.SA",
-    "JURO11": "JURO11.SA",
-    "SMAC11": "SMAC11.SA",
-    "IRIM11": "IRIM11.SA",
-    "DIVO11": "DIVO11.SA",
-    "LVOL11": "LVOL11.SA",
-    "BMMT11": "BMMT11.SA",
-    "BOVV11": "BOVV11.SA",
-    "SPXR11": "SPXR11.SA",
-    "LFTS11": "LFTS11.SA",
-    "B5P211": "B5P211.SA",
-    "IB5M11": "IB5M11.SA",
+    pattern_matches = sorted(root.glob("mlucadata*.xlsx")) + sorted(root.glob("mlucadata*.xls"))
+    for file_path in pattern_matches:
+        if file_path.exists() and file_path.is_file():
+            return file_path
 
-    # Ações B3
-    "SUZB3": "SUZB3.SA",
-    "CSAN3": "CSAN3.SA",
-    "KLBN11": "KLBN11.SA",
-    "BEEF3": "BEEF3.SA",
-    "LREN3": "LREN3.SA",
-    "BBAS3": "BBAS3.SA",
-    "VVEO3": "VVEO3.SA",
-    "BBDC4": "BBDC4.SA",
-    "CMIG4": "CMIG4.SA",
-    "EGIE3": "EGIE3.SA",
-    "WIZC3": "WIZC3.SA",
-    "UNIP6": "UNIP6.SA",
-    "ITSA4": "ITSA4.SA",
-    "ALOS3": "ALOS3.SA",
-    "CXSE3": "CXSE3.SA",
-    "VALE3": "VALE3.SA",
-    "PRIO3": "PRIO3.SA",
-    "GOAU4": "GOAU4.SA",
-    "PSSA3": "PSSA3.SA",
-    "PETR4": "PETR4.SA",
-    
+    return None
 
-    # Índices e câmbio
-    "IBOV": "^BVSP",
-    "USDBRL": "USDBRL=X",
-    "EURBRL": "EURBRL=X",
-}
 
-# Agrupando as listas conforme você descreveu
-externos = ["IWDA", "IWQU", "WSML", "EMVL", "IWVL", "IFSW", "BITW"]
-b3_etfs = [
-    "HASH11", "JURO11", "SMAC11", "IRIM11", "DIVO11", "LVOL11",
-    "BMMT11", "BOVV11", "SPXR11", "LFTS11", "B5P211", "IB5M11",
-]
-b3_acoes = [
-    "SUZB3", "CSAN3", "KLBN11", "BEEF3", "LREN3", "BBAS3", "VVEO3",
-    "BBDC4", "CMIG4", "EGIE3", "WIZC3", "UNIP6", "ITSA4", "ALOS3",
-    "CXSE3", "VALE3", "PRIO3", "GOAU4", "PETR4", "PSSA3",
-]
-indices = ["IBOV", "USDBRL", "EURBRL"]
+def load_asset_list():
+    excel_path = find_default_excel()
+    if excel_path is None:
+        st.error("Arquivo mlucadata não encontrado na raiz do repositório.")
+        st.stop()
 
-# Mapa Ativo -> Grupo
-GROUPS = {}
-for t in externos:
-    GROUPS[t] = "IBKR"
-for t in b3_etfs:
-    GROUPS[t] = "ETFs_BR"
-for t in b3_acoes:
-    GROUPS[t] = "Clube"
-for t in indices:
-    GROUPS[t] = "Outros"
+    try:
+        df_lista = pd.read_excel(excel_path, sheet_name="Lista")
+    except Exception as e:
+        st.error(f"Erro ao ler a aba 'Lista' do Excel: {e}")
+        st.stop()
+
+    expected_cols = ["Grupo", "Ativo", "Ticker Yahoo"]
+    missing = [c for c in expected_cols if c not in df_lista.columns]
+    if missing:
+        st.error(f"Colunas faltando na aba 'Lista': {missing}")
+        st.stop()
+
+    df_lista = df_lista[expected_cols].copy()
+    df_lista["Grupo"] = df_lista["Grupo"].astype(str).str.strip()
+    df_lista["Ativo"] = df_lista["Ativo"].astype(str).str.strip()
+    df_lista["Ticker Yahoo"] = df_lista["Ticker Yahoo"].astype(str).str.strip()
+
+    df_lista = df_lista[
+        (df_lista["Grupo"] != "") &
+        (df_lista["Ativo"] != "") &
+        (df_lista["Ticker Yahoo"] != "")
+    ].drop_duplicates(subset=["Ativo"], keep="first")
 
 # ==========================
 # Funções auxiliares
@@ -202,18 +169,20 @@ def get_quote_data(yf_ticker: str):
     }
 
 
-def build_table(selected_symbols):
+def build_table(df_selected):
     rows = []
-    for label in selected_symbols:
-        yf_ticker = TICKERS.get(label)
-        if yf_ticker is None:
-            continue
+
+    for _, row in df_selected.iterrows():
+        grupo = row["Grupo"]
+        ativo = row["Ativo"]
+        yf_ticker = row["Ticker Yahoo"]
 
         data = get_quote_data(yf_ticker)
+
         if data is None:
             rows.append({
-                "Grupo": GROUPS.get(label, ""),
-                "Ativo": label,
+                "Grupo": grupo,
+                "Ativo": ativo,
                 "Anterior": None,
                 "Preço": None,
                 "Variação %": None,
@@ -248,8 +217,8 @@ def build_table(selected_symbols):
             last_dt_str = str(last_dt) if last_dt is not None else None
 
         rows.append({
-            "Grupo": GROUPS.get(label, ""),
-            "Ativo": label,
+            "Grupo": grupo,
+            "Ativo": ativo,
             "Anterior": round(prev_close, 2) if prev_close else None,
             "Preço": round(current_price, 2),
             "Variação %": round(pct_change, 2) if pct_change is not None else None,
@@ -261,7 +230,7 @@ def build_table(selected_symbols):
             "Status": "OK",
         })
 
-    df = pd.DataFrame(rows)
+    return pd.DataFrame(rows)
     return df
 
 
@@ -280,46 +249,30 @@ def color_pct(val):
 
 st.sidebar.header("Filtros")
 
-# Agrupando as listas conforme você descreveu
-externos = ["IWDA", "IWQU", "WSML", "EMVL", "IWVL", "IFSW", "BITW"]
-b3_etfs = [
-    "HASH11", "JURO11", "SMAC11", "IRIM11", "DIVO11", "LVOL11",
-    "BMMT11", "BOVV11", "SPXR11", "LFTS11", "B5P211", "IB5M11",
-]
-b3_acoes = [
-    "SUZB3", "CSAN3", "KLBN11", "BEEF3", "LREN3", "BBAS3", "VVEO3",
-    "BBDC4", "CMIG4", "EGIE3", "WIZC3", "UNIP6", "ITSA4", "ALOS3",
-    "CXSE3", "VALE3", "PRIO3", "GOAU4", "PETR4", "PSSA3"
-]
-indices = ["IBOV", "USDBRL", "EURBRL"]
+df_lista = load_asset_list()
 
-st.sidebar.markdown("### Grupos de ativos")
-show_externos = st.sidebar.checkbox("Exterior", True)
-show_b3_etfs = st.sidebar.checkbox("ETFs Brasil", True)
-show_b3_acoes = st.sidebar.checkbox("Ações Brasil", True)
-show_indices = st.sidebar.checkbox("Índices e câmbio", True)
-
-symbols = []
-if show_externos:
-    symbols += externos
-if show_b3_etfs:
-    symbols += b3_etfs
-if show_b3_acoes:
-    symbols += b3_acoes
-if show_indices:
-    symbols += indices
-
-# Permitir que o usuário remova/adicione especificamente
-symbols = st.sidebar.multiselect(
-    "Selecione os ativos para exibir",
-    options=list(TICKERS.keys()),
-    default=symbols,
+grupos_disponiveis = sorted(df_lista["Grupo"].dropna().unique())
+grupos_selecionados = st.sidebar.multiselect(
+    "Selecione os grupos",
+    options=grupos_disponiveis,
+    default=grupos_disponiveis,
 )
 
-if not symbols:
+df_filtrado = df_lista[df_lista["Grupo"].isin(grupos_selecionados)].copy()
+
+ativos_default = df_filtrado["Ativo"].tolist()
+ativos_selecionados = st.sidebar.multiselect(
+    "Selecione os ativos para exibir",
+    options=df_lista["Ativo"].tolist(),
+    default=ativos_default,
+)
+
+df_filtrado = df_filtrado[df_filtrado["Ativo"].isin(ativos_selecionados)].copy()
+
+if df_filtrado.empty:
     st.warning("Selecione pelo menos um ativo na barra lateral.")
 else:
-    df = build_table(symbols)
+    df = build_table(df_filtrado)
 
     # (Opcional) já começar ordenado pela maior variação
     # df = df.sort_values(by="Variação %", ascending=False)
