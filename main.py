@@ -8,7 +8,11 @@ from pathlib import Path
 # ==========================
 # Configurações iniciais
 # ==========================
-st.set_page_config(page_title="Tyello", layout="wide")
+st.set_page_config(
+    page_title="Tyello",
+    layout="wide",
+    initial_sidebar_state="collapsed",
+)
 
 st.markdown(
     """
@@ -37,6 +41,7 @@ st.markdown(
 
     div[data-testid="stMetricLabel"] p {
         font-size: 0.80rem !important;
+        font-weight: 700 !important;
     }
 
     div[data-testid="stMetricValue"] {
