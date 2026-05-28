@@ -40,8 +40,7 @@ st.markdown(
     }
 
     div[data-testid="stMetricLabel"] p {
-        font-size: 0.80rem !important;
-        font-weight: 700 !important;
+    font-size: 0.80rem !important;
     }
 
     div[data-testid="stMetricValue"] {
