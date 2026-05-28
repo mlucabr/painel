@@ -329,10 +329,12 @@ render_outros_kpis(df_lista)
 st.sidebar.header("Filtros")
 
 grupos_disponiveis = sorted(df_lista["Grupo"].dropna().unique())
+grupos_default = [g for g in grupos_disponiveis if str(g).strip().lower() != "outros"]
+
 grupos_selecionados = st.sidebar.multiselect(
     "Selecione os grupos",
     options=grupos_disponiveis,
-    default=grupos_disponiveis,
+    default=grupos_default,
 )
 
 df_filtrado = df_lista[df_lista["Grupo"].isin(grupos_selecionados)].copy()
