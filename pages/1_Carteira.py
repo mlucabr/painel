@@ -411,7 +411,7 @@ with top_right:
         "Filtrar por carteira",
         options=carteiras_disponiveis,
         default=carteiras_default,
-        label_visibility="visible",
+        label_visibility="collapsed",
     )
 
 df_port_filtered = df_port[df_port["Carteira"].isin(selecionadas)].copy()
