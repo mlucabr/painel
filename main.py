@@ -15,7 +15,7 @@ import streamlit as st
 # ... seus imports e st.set_page_config existentes ...
 
 with st.sidebar:
-    st.page_link("streamlit_app.py", label="Painel", icon="📊")
+    st.page_link("main.py", label="Painel", icon="📊")
     st.page_link("pages/1_Carteira.py", label="Carteira", icon="📂")
 # Autorefresh a cada 5 minutos (300.000 ms)
 st_autorefresh(interval=5 * 60 * 1000, key="datarefresh")
