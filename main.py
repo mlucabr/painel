@@ -9,13 +9,42 @@ from pathlib import Path
 # Configurações iniciais
 # ==========================
 st.set_page_config(page_title="Tyello", layout="wide")
+
+st.markdown(
+    """
+    <style>
+    .block-container {
+        padding-top: 1rem;
+        padding-bottom: 1rem;
+    }
+
+    header[data-testid="stHeader"] {
+        background: rgba(255, 255, 255, 0);
+        height: 0rem;
+    }
+
+    h1 {
+        font-size: 1.8rem !important;
+        margin-top: 0rem !important;
+        margin-bottom: 0.3rem !important;
+        padding-top: 0rem !important;
+    }
+
+    div[data-testid="stMetric"] {
+        padding-top: 0.2rem;
+        padding-bottom: 0.2rem;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
 st.title("Painel de Controle")
 
 with st.sidebar:
     st.page_link("main.py", label="Painel", icon="📊")
     st.page_link("pages/1_Carteira.py", label="Carteira", icon="📂")
 
-# Autorefresh a cada 5 minutos
 st_autorefresh(interval=5 * 60 * 1000, key="datarefresh")
 
 
@@ -77,14 +106,6 @@ def load_asset_list():
 # Funções auxiliares
 # ==========================
 def get_quote_data(yf_ticker: str):
-    """
-    Busca dados de cotação via yfinance:
-    - Fechamento anterior
-    - Preço atual (último intraday, quando disponível)
-    - Máxima / mínima de 52 semanas
-    - Timestamp do último dado
-    Retorna dict ou None em caso de falha.
-    """
     try:
         hist_52 = yf.download(
             yf_ticker,
@@ -236,12 +257,61 @@ def color_pct(val):
     return f"color: {color};"
 
 
+def fmt_metric_value(x):
+    if x is None or pd.isna(x):
+        return "-"
+    return f"{x:,.2f}"
+
+
+def fmt_metric_delta(x):
+    if x is None or pd.isna(x):
+        return None
+    return f"{x:+.2f}%"
+
+
+def render_outros_kpis(df_lista):
+    df_outros = df_lista[df_lista["Grupo"].str.lower() == "outros"].copy()
+
+    if df_outros.empty:
+        return
+
+    st.markdown("### Indicadores")
+    cols = st.columns(len(df_outros))
+
+    for i, (_, row) in enumerate(df_outros.iterrows()):
+        ativo = row["Ativo"]
+        yf_ticker = row["Ticker Yahoo"]
+        data = get_quote_data(yf_ticker)
+
+        if data is None:
+            cols[i].metric(ativo, "-", delta=None)
+            continue
+
+        current_price = data["current_price"]
+        prev_close = data["prev_close"]
+
+        if prev_close:
+            delta_pct = (current_price / prev_close - 1) * 100
+        else:
+            delta_pct = None
+
+        cols[i].metric(
+            ativo,
+            fmt_metric_value(current_price),
+            delta=fmt_metric_delta(delta_pct),
+        )
+
+
+# ==========================
+# Carrega lista e renderiza KPIs
+# ==========================
+df_lista = load_asset_list()
+render_outros_kpis(df_lista)
+
 # ==========================
 # UI – filtros e exibição
 # ==========================
 st.sidebar.header("Filtros")
-
-df_lista = load_asset_list()
 
 grupos_disponiveis = sorted(df_lista["Grupo"].dropna().unique())
 grupos_selecionados = st.sidebar.multiselect(
