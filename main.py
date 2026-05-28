@@ -11,16 +11,17 @@ from pathlib import Path
 st.set_page_config(page_title="Tyello", layout="wide")
 st.title("Painel de Controle")
 
-import streamlit as st
-
-# ... seus imports e st.set_page_config existentes ...
-
 with st.sidebar:
     st.page_link("main.py", label="Painel", icon="📊")
     st.page_link("pages/1_Carteira.py", label="Carteira", icon="📂")
-# Autorefresh a cada 5 minutos (300.000 ms)
+
+# Autorefresh a cada 5 minutos
 st_autorefresh(interval=5 * 60 * 1000, key="datarefresh")
 
+
+# ==========================
+# Leitura do Excel de configuração
+# ==========================
 def find_default_excel():
     root = Path(".")
     preferred_names = [
@@ -69,24 +70,25 @@ def load_asset_list():
         (df_lista["Ticker Yahoo"] != "")
     ].drop_duplicates(subset=["Ativo"], keep="first")
 
+    return df_lista
+
+
 # ==========================
 # Funções auxiliares
 # ==========================
-
 def get_quote_data(yf_ticker: str):
     """
     Busca dados de cotação via yfinance:
-    - Fechamento anterior (Previous Close do Yahoo)
-    - Preço “atual” (último intraday, 5m atrasado aprox.)
-    - Máxima / mínima de 52 semanas (diário, ~últimos 400 dias)
-    - Timestamp do último dado (intraday ou diário)
+    - Fechamento anterior
+    - Preço atual (último intraday, quando disponível)
+    - Máxima / mínima de 52 semanas
+    - Timestamp do último dado
     Retorna dict ou None em caso de falha.
     """
-    # ---------- Histórico longo para 52 semanas ----------
     try:
         hist_52 = yf.download(
             yf_ticker,
-            period="400d",        # ~últimos 400 dias
+            period="400d",
             interval="1d",
             auto_adjust=False,
             progress=False,
@@ -98,9 +100,9 @@ def get_quote_data(yf_ticker: str):
     if hist_52 is None or hist_52.empty:
         return None
 
-    # 52 semanas ~ últimos 365 dias
     end = datetime.today()
     hist_52w = hist_52[hist_52.index >= (end - timedelta(days=365))]
+
     if hist_52w.empty:
         high_52w = hist_52["High"].max()
         low_52w = hist_52["Low"].min()
@@ -108,7 +110,6 @@ def get_quote_data(yf_ticker: str):
         high_52w = hist_52w["High"].max()
         low_52w = hist_52w["Low"].min()
 
-    # ---------- 2 dias diários para Previous Close ----------
     try:
         daily_2d = yf.download(
             yf_ticker,
@@ -124,21 +125,18 @@ def get_quote_data(yf_ticker: str):
     if daily_2d is None or daily_2d.empty:
         return None
 
-    # Se só tiver 1 linha (ativo muito novo, primeiro dia), usa o mesmo valor
     if len(daily_2d["Close"]) == 1:
         prev_close = daily_2d["Close"].iloc[0]
         current_daily = prev_close
     else:
-        # iloc[-2] = dia anterior (Previous Close), iloc[-1] = dia atual (parcial ou fechado)
         prev_close = daily_2d["Close"].iloc[-2]
         current_daily = daily_2d["Close"].iloc[-1]
 
-    # ---------- Intraday para Preço atual ----------
     try:
         intraday = yf.download(
             yf_ticker,
-            period="1d",          # só o pregão de hoje
-            interval="5m",        # candles de 5 minutos (com atraso do Yahoo)
+            period="1d",
+            interval="5m",
             auto_adjust=False,
             progress=False,
             multi_level_index=False,
@@ -150,19 +148,17 @@ def get_quote_data(yf_ticker: str):
         last_ts = intraday.index[-1]
         last_close = intraday["Close"].iloc[-1]
     else:
-        # fallback: usa o diário do dia atual
         last_ts = daily_2d.index[-1]
         last_close = current_daily
 
-    # Converter timestamp para horário de São Paulo se tiver timezone
     if isinstance(last_ts, pd.Timestamp) and last_ts.tzinfo is not None:
         last_ts_local = last_ts.tz_convert("America/Sao_Paulo")
     else:
         last_ts_local = last_ts
 
     return {
-        "current_price": float(last_close),                          # Preço
-        "prev_close": float(prev_close) if prev_close is not None else None,  # Anterior (Previous Close)
+        "current_price": float(last_close),
+        "prev_close": float(prev_close) if prev_close is not None else None,
         "high_52w": float(high_52w),
         "low_52w": float(low_52w),
         "last_datetime": last_ts_local,
@@ -231,22 +227,18 @@ def build_table(df_selected):
         })
 
     return pd.DataFrame(rows)
-    return df
 
 
 def color_pct(val):
-    """Função de cor para a coluna de variação percentual."""
     if pd.isna(val):
         return ""
     color = "green" if val > 0 else "red" if val < 0 else "black"
-    # Styler.map espera uma string CSS
     return f"color: {color};"
 
 
 # ==========================
 # UI – filtros e exibição
 # ==========================
-
 st.sidebar.header("Filtros")
 
 df_lista = load_asset_list()
@@ -273,12 +265,8 @@ if df_filtrado.empty:
     st.warning("Selecione pelo menos um ativo na barra lateral.")
 else:
     df = build_table(df_filtrado)
+    df = df.sort_values(by="Variação %", ascending=False, na_position="last")
 
-    # (Opcional) já começar ordenado pela maior variação
-    # df = df.sort_values(by="Variação %", ascending=False)
-
-    # Formatação da tabela
-    df = df.sort_values(by="Variação %", ascending=False)
     styled = (
         df.style
         .map(color_pct, subset=["Variação %"])
@@ -293,11 +281,11 @@ else:
     )
 
     st.dataframe(
-    styled,
-    use_container_width=True,
-    hide_index=True,
-    height="content",  # ajuste esse valor até ficar confortável
-    row_height=24, # ajustar até valor que gostar
+        styled,
+        use_container_width=True,
+        hide_index=True,
+        height="content",
+        row_height=24,
     )
 
     st.caption(
