@@ -281,12 +281,6 @@ def get_quote_data(yf_ticker: str):
 # ==========================
 # Layout topo
 # ==========================
-col_title, col_upload = st.columns([3, 1])
-
-with col_title:
-    st.page_link("main.py", label="← Voltar para Painel", icon="🏠")
-    st.title("Carteira de Investimentos")
-
 if "carteira_file_bytes" not in st.session_state:
     st.session_state["carteira_file_bytes"] = None
 
@@ -295,10 +289,17 @@ if "carteira_file_name" not in st.session_state:
 
 default_excel_path = find_default_excel()
 
-with col_upload:
+top_left, top_right = st.columns([3, 1], vertical_alignment="top")
+
+with top_left:
+    st.page_link("main.py", label="← Voltar para Painel", icon="🏠")
+    st.title("Carteira de Investimentos")
+
+with top_right:
     uploaded_file = st.file_uploader(
         "Upload do arquivo Excel",
         type=["xlsx", "xls"],
+        label_visibility="collapsed",
     )
 
 if uploaded_file is not None:
@@ -325,12 +326,13 @@ except Exception as e:
     st.error(f"Erro ao ler o Excel: {e}")
     st.stop()
 
-if st.session_state["carteira_file_name"]:
-    file_name = st.session_state["carteira_file_name"]
-    if excel_updated_at:
-        st.caption(f"Arquivo carregado: {file_name} | Atualizado: {excel_updated_at}")
-    else:
-        st.caption(f"Arquivo carregado: {file_name}")
+with top_left:
+    if st.session_state["carteira_file_name"]:
+        file_name = st.session_state["carteira_file_name"]
+        if excel_updated_at:
+            st.caption(f"Arquivo carregado: {file_name} | Atualizado: {excel_updated_at}")
+        else:
+            st.caption(f"Arquivo carregado: {file_name}")
 
 expected_cols = [
     "Ativo",
@@ -386,9 +388,7 @@ df_port["Moeda"] = df_port["Carteira"].map(CURRENCY_BY_CARTEIRA).fillna("BRL")
 # ==========================
 # Filtro por carteira
 # ==========================
-col_filtro, _ = st.columns([1, 1])
-
-with col_filtro:
+with top_right:
     carteiras_disponiveis = sorted(df_port["Carteira"].dropna().unique())
     carteiras_default = [c for c in carteiras_disponiveis if str(c).strip().lower() == "clube"]
 
