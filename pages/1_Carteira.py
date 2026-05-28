@@ -6,20 +6,64 @@ from datetime import datetime, timedelta
 from streamlit_autorefresh import st_autorefresh
 from pathlib import Path
 
-# Atualiza automaticamente a cada 5 minutos
+st.set_page_config(
+    page_title="Tyello",
+    layout="wide",
+    initial_sidebar_state="collapsed",
+)
+
+st.markdown(
+    """
+    <style>
+    .block-container {
+        padding-top: 1rem;
+        padding-bottom: 1rem;
+    }
+
+    header[data-testid="stHeader"] {
+        background: rgba(255, 255, 255, 0);
+        height: 0rem;
+    }
+
+    h1 {
+        font-size: 1.8rem !important;
+        margin-top: 0rem !important;
+        margin-bottom: 0.2rem !important;
+        padding-top: 0rem !important;
+    }
+
+    div[data-testid="stMetric"] {
+        padding-top: 0.1rem;
+        padding-bottom: 0.1rem;
+    }
+
+    div[data-testid="stMetricLabel"] p {
+        font-size: 0.80rem !important;
+    }
+
+    div[data-testid="stMetricValue"] {
+        font-size: 0.95rem !important;
+    }
+
+    div[data-testid="stMetricDelta"] {
+        font-size: 0.75rem !important;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
 st_autorefresh(interval=5 * 60 * 1000, key="carteira_refresh")
 
 
 # ==========================
 # Funções auxiliares gerais
 # ==========================
-
 def fmt_num(x, dec=2, signed=False, pct=False):
     if pd.isna(x):
         return ""
     fmt = f"{{:{'+' if signed else ''},.{dec}f}}"
     s = fmt.format(x)
-    # troca ponto e vírgula para padrão brasileiro
     s = s.replace(",", "X").replace(".", ",").replace("X", ".")
     if pct:
         s += "%"
@@ -53,18 +97,11 @@ def get_usdbrl_rate():
 
     if data is None or data.empty:
         return None
+
     return float(data["Close"].iloc[-1])
 
+
 def find_default_excel():
-    """
-    Procura na raiz do repo um arquivo Excel cujo nome comece com 'mlucadata'.
-    Prioridade:
-    1) mlucadata.xlsx
-    2) mlucadata.xls
-    3) mlucadata*.xlsx
-    4) mlucadata*.xls
-    Retorna um Path ou None.
-    """
     root = Path(".")
 
     preferred_names = [
@@ -83,11 +120,8 @@ def find_default_excel():
 
     return None
 
+
 def read_excel_updated_at(file_obj):
-    """
-    Lê a data de atualização da aba Controle, célula B1.
-    Retorna string formatada ou None.
-    """
     try:
         if isinstance(file_obj, (bytes, bytearray)):
             excel_source = io.BytesIO(file_obj)
@@ -115,6 +149,7 @@ def read_excel_updated_at(file_obj):
 
     except Exception:
         return None
+
 
 def get_ibov_data():
     try:
@@ -161,155 +196,8 @@ def get_ibov_data():
 
     return current_price, delta_pct
 
-# ==========================
-# Layout topo: voltar, título, upload
-# ==========================
-
-col_title, col_upload = st.columns([3, 1])
-
-with col_title:
-    # Botão para voltar ao Painel
-    st.page_link("main.py", label="← Voltar para Painel", icon="🏠")
-    st.title("Carteira de Investimentos")
-
-# Inicializa storage do arquivo na sessão
-if "carteira_file_bytes" not in st.session_state:
-    st.session_state["carteira_file_bytes"] = None
-
-if "carteira_file_name" not in st.session_state:
-    st.session_state["carteira_file_name"] = None
-
-# Tenta localizar arquivo padrão na raiz do repo
-default_excel_path = find_default_excel()
-
-with col_upload:
-    uploaded_file = st.file_uploader(
-        "Upload do arquivo Excel",
-        type=["xlsx", "xls"]
-    )
-
-    # Se o usuário subir um arquivo, ele tem prioridade sobre o default da raiz
-    if uploaded_file is not None:
-        st.session_state["carteira_file_bytes"] = uploaded_file.getvalue()
-        st.session_state["carteira_file_name"] = uploaded_file.name
-
-# Se ainda não houver arquivo na sessão, tenta carregar o arquivo padrão da raiz
-if st.session_state["carteira_file_bytes"] is None and default_excel_path is not None:
-    try:
-        st.session_state["carteira_file_bytes"] = default_excel_path.read_bytes()
-        st.session_state["carteira_file_name"] = default_excel_path.name
-    except Exception as e:
-        st.error(f"Erro ao ler o arquivo padrão '{default_excel_path.name}': {e}")
-        st.stop()
-
-# Se não temos nem upload nem arquivo padrão, fica aguardando upload
-if st.session_state["carteira_file_bytes"] is None:
-    st.info("Envie um arquivo .xlsx/.xls para ver a carteira.")
-    st.stop()
-
-# Lê o Excel a partir dos bytes armazenados
-try:
-    file_bytes = st.session_state["carteira_file_bytes"]
-
-    # Lê metadado da aba Controle
-    excel_updated_at = read_excel_updated_at(file_bytes)
-
-    # Lê a planilha principal da carteira
-    df_raw = pd.read_excel(io.BytesIO(file_bytes), sheet_name="upload_data")
-except Exception as e:
-    st.error(f"Erro ao ler o Excel: {e}")
-    st.stop()
-    
-# Exibe origem do arquivo carregado
-if st.session_state["carteira_file_name"]:
-    file_name = st.session_state["carteira_file_name"]
-
-    if excel_updated_at:
-        st.caption(f"Arquivo carregado: {file_name} | Atualizado: {excel_updated_at}")
-    else:
-        st.caption(f"Arquivo carregado: {file_name}")
-        
-# Conferir colunas esperadas
-expected_cols = [
-    "Ativo",
-    "Carteira",
-    "Posição",
-    "Preço médio",
-    "PM Ajustado",
-    "Escopo",
-]
-missing = [c for c in expected_cols if c not in df_raw.columns]
-if missing:
-    st.error(f"Colunas faltando no Excel: {missing}")
-    st.stop()
-
-# Mantém apenas as colunas relevantes e garante tipos numéricos
-df_port = df_raw[expected_cols].copy()
-df_port["Posição"] = pd.to_numeric(df_port["Posição"], errors="coerce").fillna(0.0)
-df_port["Preço médio"] = pd.to_numeric(df_port["Preço médio"], errors="coerce").fillna(0.0)
-df_port["PM Ajustado"] = pd.to_numeric(df_port["PM Ajustado"], errors="coerce").fillna(0.0)
-
-# ==========================
-# Mapeamento para Yahoo Finance e Moeda
-# ==========================
-
-YF_SPECIAL = {
-    # Exterior (ajuste conforme seus ativos reais)
-    "IWDA": "IWDA.L",
-    "IWQU": "IWQU.L",
-    "WSML": "WSML.L",
-    "EMVL": "EMVL.L",
-    "IWVL": "IWVL.L",
-    "IFSW": "IFSW.L",
-    "BITW": "BITW",
-
-    # Índices / câmbio
-    "IBOV": "^BVSP",
-    "USDBRL": "USDBRL=X",
-    "EURBRL": "EURBRL=X",
-}
-
-
-def map_to_yahoo(ativo: str) -> str:
-    """
-    Converte o nome do ativo (coluna 'Ativo' da planilha)
-    para o ticker do Yahoo Finance.
-    Regra:
-      - Se estiver em YF_SPECIAL, usa o mapeamento.
-      - Se já terminar com '.SA', usa como está.
-      - Caso contrário, assume B3 e adiciona '.SA'.
-    """
-    if ativo in YF_SPECIAL:
-        return YF_SPECIAL[ativo]
-    if ativo.endswith(".SA"):
-        return ativo
-    return f"{ativo}.SA"
-
-
-df_port["Ticker Yahoo"] = df_port["Ativo"].astype(str).apply(map_to_yahoo)
-
-# Mapa de moeda por carteira (ajuste conforme nomes reais da planilha)
-CURRENCY_BY_CARTEIRA = {
-    "Exterior": "USD",
-    "ETF.BR": "BRL",
-    "Clube": "BRL",
-}
-df_port["Moeda"] = df_port["Carteira"].map(CURRENCY_BY_CARTEIRA).fillna("BRL")
-
-# ==========================
-# Função de cotações (similar ao painel)
-# ==========================
 
 def get_quote_data(yf_ticker: str):
-    """
-    Busca dados de cotação via yfinance:
-    - Fechamento anterior (Previous Close do Yahoo)
-    - Preço “atual” (último intraday, 5m atrasado aprox.)
-    - Máxima / mínima de 52 semanas (diário, ~últimos 400 dias)
-    - Timestamp do último dado (intraday ou diário)
-    Retorna dict ou None em caso de falha.
-    """
-    # ---------- Histórico longo para 52 semanas ----------
     try:
         hist_52 = yf.download(
             yf_ticker,
@@ -327,6 +215,7 @@ def get_quote_data(yf_ticker: str):
 
     end = datetime.today()
     hist_52w = hist_52[hist_52.index >= (end - timedelta(days=365))]
+
     if hist_52w.empty:
         high_52w = hist_52["High"].max()
         low_52w = hist_52["Low"].min()
@@ -334,7 +223,6 @@ def get_quote_data(yf_ticker: str):
         high_52w = hist_52w["High"].max()
         low_52w = hist_52w["Low"].min()
 
-    # ---------- 2 dias diários para Previous Close ----------
     try:
         daily_2d = yf.download(
             yf_ticker,
@@ -357,7 +245,6 @@ def get_quote_data(yf_ticker: str):
         prev_close = daily_2d["Close"].iloc[-2]
         current_daily = daily_2d["Close"].iloc[-1]
 
-    # ---------- Intraday para preço atual ----------
     try:
         intraday = yf.download(
             yf_ticker,
@@ -392,38 +279,136 @@ def get_quote_data(yf_ticker: str):
 
 
 # ==========================
-# Filtro por carteira (abaixo do título, meia largura)
+# Layout topo
 # ==========================
+col_title, col_upload = st.columns([3, 1])
 
+with col_title:
+    st.page_link("main.py", label="← Voltar para Painel", icon="🏠")
+    st.title("Carteira de Investimentos")
+
+if "carteira_file_bytes" not in st.session_state:
+    st.session_state["carteira_file_bytes"] = None
+
+if "carteira_file_name" not in st.session_state:
+    st.session_state["carteira_file_name"] = None
+
+default_excel_path = find_default_excel()
+
+with col_upload:
+    uploaded_file = st.file_uploader(
+        "Upload do arquivo Excel",
+        type=["xlsx", "xls"],
+    )
+
+if uploaded_file is not None:
+    st.session_state["carteira_file_bytes"] = uploaded_file.getvalue()
+    st.session_state["carteira_file_name"] = uploaded_file.name
+
+if st.session_state["carteira_file_bytes"] is None and default_excel_path is not None:
+    try:
+        st.session_state["carteira_file_bytes"] = default_excel_path.read_bytes()
+        st.session_state["carteira_file_name"] = default_excel_path.name
+    except Exception as e:
+        st.error(f"Erro ao ler o arquivo padrão '{default_excel_path.name}': {e}")
+        st.stop()
+
+if st.session_state["carteira_file_bytes"] is None:
+    st.info("Envie um arquivo .xlsx/.xls para ver a carteira.")
+    st.stop()
+
+try:
+    file_bytes = st.session_state["carteira_file_bytes"]
+    excel_updated_at = read_excel_updated_at(file_bytes)
+    df_raw = pd.read_excel(io.BytesIO(file_bytes), sheet_name="upload_data")
+except Exception as e:
+    st.error(f"Erro ao ler o Excel: {e}")
+    st.stop()
+
+if st.session_state["carteira_file_name"]:
+    file_name = st.session_state["carteira_file_name"]
+    if excel_updated_at:
+        st.caption(f"Arquivo carregado: {file_name} | Atualizado: {excel_updated_at}")
+    else:
+        st.caption(f"Arquivo carregado: {file_name}")
+
+expected_cols = [
+    "Ativo",
+    "Carteira",
+    "Posição",
+    "Preço médio",
+    "PM Ajustado",
+    "Escopo",
+]
+
+missing = [c for c in expected_cols if c not in df_raw.columns]
+if missing:
+    st.error(f"Colunas faltando no Excel: {missing}")
+    st.stop()
+
+df_port = df_raw[expected_cols].copy()
+df_port["Posição"] = pd.to_numeric(df_port["Posição"], errors="coerce").fillna(0.0)
+df_port["Preço médio"] = pd.to_numeric(df_port["Preço médio"], errors="coerce").fillna(0.0)
+df_port["PM Ajustado"] = pd.to_numeric(df_port["PM Ajustado"], errors="coerce").fillna(0.0)
+
+YF_SPECIAL = {
+    "IWDA": "IWDA.L",
+    "IWQU": "IWQU.L",
+    "WSML": "WSML.L",
+    "EMVL": "EMVL.L",
+    "IWVL": "IWVL.L",
+    "IFSW": "IFSW.L",
+    "BITW": "BITW",
+    "IBOV": "^BVSP",
+    "USDBRL": "USDBRL=X",
+    "EURBRL": "EURBRL=X",
+}
+
+
+def map_to_yahoo(ativo: str) -> str:
+    if ativo in YF_SPECIAL:
+        return YF_SPECIAL[ativo]
+    if ativo.endswith(".SA"):
+        return ativo
+    return f"{ativo}.SA"
+
+
+df_port["Ticker Yahoo"] = df_port["Ativo"].astype(str).apply(map_to_yahoo)
+
+CURRENCY_BY_CARTEIRA = {
+    "Exterior": "USD",
+    "ETF.BR": "BRL",
+    "Clube": "BRL",
+}
+
+df_port["Moeda"] = df_port["Carteira"].map(CURRENCY_BY_CARTEIRA).fillna("BRL")
+
+# ==========================
+# Filtro por carteira
+# ==========================
 col_filtro, _ = st.columns([1, 1])
 
 with col_filtro:
     carteiras_disponiveis = sorted(df_port["Carteira"].dropna().unique())
+    carteiras_default = [c for c in carteiras_disponiveis if str(c).strip().lower() == "clube"]
+
     selecionadas = st.multiselect(
         "Filtrar por carteira",
         options=carteiras_disponiveis,
-        default=carteiras_disponiveis,
+        default=carteiras_default,
         label_visibility="visible",
     )
 
-df_port_filtered = df_port[df_port["Carteira"].isin(selecionadas)]
+df_port_filtered = df_port[df_port["Carteira"].isin(selecionadas)].copy()
 
 if df_port_filtered.empty:
     st.warning("Nenhum ativo para as carteiras selecionadas.")
     st.stop()
 
-# ==========================
-# Taxa de câmbio USDBRL
-# ==========================
-
 usdbrl = get_usdbrl_rate()
 if usdbrl is None:
     st.error("Não foi possível obter a cotação USDBRL. Não dá para consolidar em BRL.")
     st.stop()
-
-# ==========================
-# Buscar cotações para cada ativo
-# ==========================
 
 unique_tickers = (
     df_port_filtered[["Ativo", "Ticker Yahoo"]]
@@ -436,6 +421,7 @@ for _, row in unique_tickers.iterrows():
     ativo = row["Ativo"]
     yf_ticker = row["Ticker Yahoo"]
     data = get_quote_data(yf_ticker)
+
     if data is None:
         quote_rows.append({
             "Ativo": ativo,
@@ -472,15 +458,7 @@ for _, row in unique_tickers.iterrows():
 
 df_quotes = pd.DataFrame(quote_rows)
 
-# ==========================
-# Juntar carteira + cotações
-# ==========================
-
 df = df_port_filtered.merge(df_quotes, on=["Ativo", "Ticker Yahoo"], how="left")
-
-# ==========================
-# Cálculos de colunas derivadas (local e BRL)
-# ==========================
 
 df["Valor Anterior"] = df["Posição"] * df["Anterior"]
 df["Valor de Mercado"] = df["Posição"] * df["Preço"]
@@ -489,6 +467,7 @@ df["Valor Anterior BRL"] = df.apply(
     lambda row: row["Valor Anterior"] * usdbrl if row["Moeda"] == "USD" else row["Valor Anterior"],
     axis=1,
 )
+
 df["Valor de Mercado BRL"] = df.apply(
     lambda row: row["Valor de Mercado"] * usdbrl if row["Moeda"] == "USD" else row["Valor de Mercado"],
     axis=1,
@@ -501,19 +480,18 @@ df["Total investido BRL"] = df.apply(
     lambda row: row["Total investido"] * usdbrl if row["Moeda"] == "USD" else row["Total investido"],
     axis=1,
 )
+
 df["Total ajustado BRL"] = df.apply(
     lambda row: row["Total ajustado"] * usdbrl if row["Moeda"] == "USD" else row["Total ajustado"],
     axis=1,
 )
 
-# P&L do dia por ativo (local e BRL)
 df["P&L dia"] = df["Valor de Mercado"] - df["Valor Anterior"]
 df["P&L dia BRL"] = df.apply(
     lambda row: row["P&L dia"] * usdbrl if row["Moeda"] == "USD" else row["P&L dia"],
     axis=1,
 )
 
-# Retornos percentuais (não dependem de moeda)
 df["Total return"] = (
     (df["Valor de Mercado"] / df["Total investido"] - 1) * 100
 ).where(df["Total investido"] > 0)
@@ -521,10 +499,6 @@ df["Total return"] = (
 df["TR PMA"] = (
     (df["Valor de Mercado"] / df["Total ajustado"] - 1) * 100
 ).where(df["Total ajustado"] > 0)
-
-# ==========================
-# Linha totalizadora (em BRL)
-# ==========================
 
 tot_valor_anterior_brl = df["Valor Anterior BRL"].sum()
 tot_valor_mercado_brl = df["Valor de Mercado BRL"].sum()
@@ -581,67 +555,62 @@ df_total = pd.DataFrame([total_row])
 ibov_pts, ibov_delta_pct = get_ibov_data()
 
 # ==========================
-# KPIs da carteira (em BRL)
+# KPIs
 # ==========================
-
 col1, col2, col3, col4, col5, col6, col7 = st.columns(7)
 
 with col1:
     st.metric(
-        "Valor de Mercado (BRL)",
+        "**Valor de Mercado (BRL)**",
         fmt_num(tot_valor_mercado_brl),
-        help="Somatório do Valor de Mercado (BRL) para as carteiras selecionadas."
+        help="Somatório do Valor de Mercado (BRL) para as carteiras selecionadas.",
     )
 
 with col2:
     delta_dia = fmt_pct(carteira_pct_dia) if carteira_pct_dia is not None else "-"
     st.metric(
-        "P&L Dia (original)",
+        "**P&L Dia (original)**",
         fmt_num(tot_pl_dia),
         delta=delta_dia,
-        help="Variação da carteira hoje somando o P&L de cada ativo em sua moeda original, sem conversão para BRL."
+        help="Variação da carteira hoje somando o P&L de cada ativo em sua moeda original, sem conversão para BRL.",
     )
 
 with col3:
-        st.metric(
-        "P&L Dia (BRL)",
+    st.metric(
+        "**P&L Dia (BRL)**",
         fmt_num(tot_pl_dia_brl),
         delta=delta_dia,
-        help="Variação da carteira hoje em BRL em relação ao fechamento do dia anterior."
+        help="Variação da carteira hoje em BRL em relação ao fechamento do dia anterior.",
     )
 
 with col4:
     st.metric(
-        "Total Return",
+        "**Total Return**",
         fmt_pct(carteira_total_return) if carteira_total_return is not None else "-",
-        help="Retorno acumulado da carteira em relação ao total investido (BRL)."
+        help="Retorno acumulado da carteira em relação ao total investido (BRL).",
     )
 
 with col5:
     st.metric(
-        "Total Return (PMA)",
+        "**Total Return (PMA)**",
         fmt_pct(carteira_tr_pma) if carteira_tr_pma is not None else "-",
-        help="Retorno acumulado da carteira considerando o Preço Mádio Ajustado (BRL)."
+        help="Retorno acumulado da carteira considerando o Preço Médio Ajustado (BRL).",
     )
 
 with col6:
     st.metric(
-        "USD/BRL",
+        "**USD/BRL**",
         fmt_num(usdbrl),
-        help="Cotação BRL por 1 USD obtida via Yahoo Finance (USDBRL=X)."
+        help="Cotação BRL por 1 USD obtida via Yahoo Finance (USDBRL=X).",
     )
 
 with col7:
     st.metric(
-        "Ibovespa",
+        "**Ibovespa**",
         fmt_num(ibov_pts, 0) if ibov_pts is not None else "-",
         delta=fmt_pct(ibov_delta_pct) if ibov_delta_pct is not None else None,
-        help="Pontuação atual do Ibovespa (^BVSP) e variação percentual em relação ao fechamento anterior."
+        help="Pontuação atual do Ibovespa (^BVSP) e variação percentual em relação ao fechamento anterior.",
     )
-
-# ==========================
-# Exibição
-# ==========================
 
 rename_cols = {
     "Carteira": "Carteira",
@@ -705,11 +674,13 @@ df_total = df_total[cols_order].replace({None: ""})
 
 st.subheader("Tabela da carteira")
 
+
 def color_pct(val):
     if pd.isna(val):
         return ""
     color = "green" if val > 0 else "red" if val < 0 else "black"
     return f"color: {color};"
+
 
 styled_detail = (
     df_detail.style
@@ -773,7 +744,6 @@ st.caption(
 # ==========================
 # Download da carteira detalhada
 # ==========================
-
 csv_export = pd.concat([df_detail, df_total], ignore_index=True)
 csv_bytes = csv_export.to_csv(
     index=False,
