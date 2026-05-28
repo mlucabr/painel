@@ -26,13 +26,25 @@ st.markdown(
     h1 {
         font-size: 1.8rem !important;
         margin-top: 0rem !important;
-        margin-bottom: 0.3rem !important;
+        margin-bottom: 0.2rem !important;
         padding-top: 0rem !important;
     }
 
     div[data-testid="stMetric"] {
-        padding-top: 0.2rem;
-        padding-bottom: 0.2rem;
+        padding-top: 0.1rem;
+        padding-bottom: 0.1rem;
+    }
+
+    div[data-testid="stMetricLabel"] p {
+        font-size: 0.80rem !important;
+    }
+
+    div[data-testid="stMetricValue"] {
+        font-size: 0.95rem !important;
+    }
+
+    div[data-testid="stMetricDelta"] {
+        font-size: 0.75rem !important;
     }
     </style>
     """,
@@ -275,7 +287,6 @@ def render_outros_kpis(df_lista):
     if df_outros.empty:
         return
 
-    st.markdown("### Indicadores")
     cols = st.columns(len(df_outros))
 
     for i, (_, row) in enumerate(df_outros.iterrows()):
