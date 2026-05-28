@@ -169,7 +169,7 @@ col_title, col_upload = st.columns([3, 1])
 
 with col_title:
     # Botão para voltar ao Painel
-    st.page_link("streamlit_app.py", label="← Voltar para Painel", icon="🏠")
+    st.page_link("main.py", label="← Voltar para Painel", icon="🏠")
     st.title("Carteira de Investimentos")
 
 # Inicializa storage do arquivo na sessão
