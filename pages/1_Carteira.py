@@ -51,6 +51,60 @@ st.markdown(
     </style>
     """,
     unsafe_allow_html=True,
+)st.markdown(
+    """
+    <style>
+    .block-container {
+        padding-top: 1rem;
+        padding-bottom: 1rem;
+    }
+
+    header[data-testid="stHeader"] {
+        background: rgba(255, 255, 255, 0);
+        height: 0rem;
+    }
+
+    h1 {
+        font-size: 1.8rem !important;
+        margin-top: 0rem !important;
+        margin-bottom: 0.05rem !important;
+        padding-top: 0rem !important;
+        padding-bottom: 0rem !important;
+    }
+
+    p {
+        margin-top: 0rem !important;
+        margin-bottom: 0rem !important;
+    }
+
+    div[data-testid="stMetric"] {
+        padding-top: 0.1rem;
+        padding-bottom: 0.1rem;
+    }
+
+    div[data-testid="stMetricLabel"] p {
+        font-size: 0.80rem !important;
+    }
+
+    div[data-testid="stMetricValue"] {
+        font-size: 0.95rem !important;
+    }
+
+    div[data-testid="stMetricDelta"] {
+        font-size: 0.75rem !important;
+    }
+
+    [data-testid="column"]:nth-of-type(1) [data-testid="stVerticalBlock"] {
+        gap: 0rem;
+    }
+
+    [data-testid="stCaptionContainer"] {
+        margin-top: 0rem !important;
+        padding-top: 0rem !important;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
 )
 
 st_autorefresh(interval=5 * 60 * 1000, key="carteira_refresh")
