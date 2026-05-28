@@ -300,7 +300,7 @@ def render_outros_kpis(df_lista):
         data = get_quote_data(yf_ticker)
 
         if data is None:
-            cols[i].metric(ativo, "-", delta=None)
+            cols[i].metric(f"**{ativo}**", "-", delta=None)
             continue
 
         current_price = data["current_price"]
@@ -312,7 +312,7 @@ def render_outros_kpis(df_lista):
             delta_pct = None
 
         cols[i].metric(
-            ativo,
+            f"**{ativo}**",
             fmt_metric_value(current_price),
             delta=fmt_metric_delta(delta_pct),
         )
