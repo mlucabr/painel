@@ -7,8 +7,8 @@ from datetime import datetime, timedelta
 # ==========================
 # Configurações iniciais
 # ==========================
-st.set_page_config(page_title="Painel de Cotações", layout="wide")
-st.title("Painel de Controle")
+st.set_page_config(page_title="Tyello", layout="wide")
+st.title("Cockpit")
 
 import streamlit as st
 
